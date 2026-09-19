@@ -2,28 +2,6 @@
 
 Multi-module Maven project built on **Java 21** and **Spring Boot 4.0.7** (Spring Cloud 2025.1.2).
 
-## Modules
-
-| Module            | Description                                   | Stack                                | Port |
-|-------------------|-----------------------------------------------|--------------------------------------|------|
-| `api-gateway`     | Single entry point that routes to services    | Spring Cloud Gateway (WebFlux), Actuator | 8080 |
-| `payment-service` | Payment processing service                    | Spring MVC, Actuator                 | 8081 |
-
-## Layout
-
-```
-payment-platform/
-├── pom.xml                  # parent POM (packaging=pom, inherits spring-boot-starter-parent)
-├── mvnw / mvnw.cmd          # Maven Wrapper
-├── .mvn/wrapper/
-├── api-gateway/
-│   ├── pom.xml
-│   └── src/{main,test}/...
-└── payment-service/
-    ├── pom.xml
-    └── src/{main,test}/...
-```
-
 ## Prerequisites
 
 - JDK 21
@@ -62,5 +40,5 @@ Health checks: <http://localhost:8080/actuator/health> and <http://localhost:808
 
 ## Adding a new module
 
-1. Create the module directory with its own `pom.xml` (parent = `payment-platform`).
+1. Create the module directory with its own `pom.xml` (parent = `testing-platform`).
 2. Register it in the parent `pom.xml` under `<modules>`.
