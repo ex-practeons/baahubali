@@ -1,4 +1,4 @@
-# payment-platform
+# testing-platform
 
 Multi-module Maven project built on **Java 21** and **Spring Boot 4.0.7** (Spring Cloud 2025.1.2).
 
