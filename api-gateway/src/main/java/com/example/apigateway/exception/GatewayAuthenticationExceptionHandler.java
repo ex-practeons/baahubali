@@ -1,10 +1,7 @@
 package com.example.apigateway.exception;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.webflux.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -12,11 +9,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebExceptionHandler;
 import reactor.core.publisher.Mono;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 @Order(-2) 
-public class GatewayAuthenticationExceptionHandler implements ErrorWebExceptionHandler {
+public class GatewayAuthenticationExceptionHandler implements WebExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GatewayAuthenticationExceptionHandler.class);
 
@@ -50,7 +49,7 @@ public class GatewayAuthenticationExceptionHandler implements ErrorWebExceptionH
                 Mono.fromCallable(() -> serialize(ErrorResponse.of(errorCode, path), response.bufferFactory())));
     }
 
-    private DataBuffer serialize(ErrorResponse body, DataBufferFactory bufferFactory) throws JsonProcessingException {
+    private DataBuffer serialize(ErrorResponse body, DataBufferFactory bufferFactory) {
         return bufferFactory.wrap(objectMapper.writeValueAsBytes(body));
     }
 }

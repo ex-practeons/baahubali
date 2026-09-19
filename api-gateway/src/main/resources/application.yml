@@ -4,30 +4,31 @@ server:
 spring:
   application:
     name: api-gateway
+  config:
+    import: optional:file:.env[.properties]
   cloud:
     gateway:
-      routes:
-        - id: iam-service
-          uri: ${IAM_SERVICE_URL:http://localhost:8081}
-          predicates:
-            - Path=/api/auth/**, /api/users/**
-        - id: exam-engine
-          uri: ${EXAM_ENGINE_URL:http://localhost:8082}
-          predicates:
-            - Path=/api/exams/**
+      server:
+        webflux:
+          routes:
+            - id: iam-service
+              uri: ${IAM_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**, /api/users/**
+            - id: exam-engine
+              uri: ${EXAM_ENGINE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/exams/**
 
 gateway:
   security:
-    # Prefer exact paths over wildcards for public routes (see notes).
     public-paths:
       - /api/auth/login
       - /api/auth/register
     jwt:
-      # Base64-encoded HMAC key; must be identical to the key iam-service signs with. Min. 256 bits.
       secret: ${JWT_SECRET}
       cookie-name: jwt_token
       user-id-claim: sub
       role-claim: role
-      # Optional: enforced only when set
       issuer: ${JWT_ISSUER:}
       clock-skew-seconds: 30
