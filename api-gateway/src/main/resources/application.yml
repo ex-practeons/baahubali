@@ -8,23 +8,36 @@ spring:
     import: optional:file:.env[.properties]
   cloud:
     gateway:
-      server:
-        webflux:
-          routes:
-            - id: iam-service
-              uri: ${IAM_SERVICE_URL:http://localhost:8081}
-              predicates:
-                - Path=/api/auth/**, /api/users/**
-            - id: exam-engine
-              uri: ${EXAM_ENGINE_URL:http://localhost:8082}
-              predicates:
-                - Path=/api/exams/**
+      routes:
+        - id: iam-service
+          uri: ${IAM_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**, /api/users/**
+        - id: exam-engine
+          uri: ${EXAM_ENGINE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/exams/**
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: IAM Service
+        url: /api/auth/v3/api-docs
+      - name: Exam Engine
+        url: /api/exams/v3/api-docs
 
 gateway:
   security:
     public-paths:
       - /api/auth/login
       - /api/auth/register
+      - /swagger-ui.html
+      - /swagger-ui/**
+      - /v3/api-docs/**
+      - /api/auth/v3/api-docs
+      - /api/exams/v3/api-docs
+      - /webjars/**
     jwt:
       secret: ${JWT_SECRET}
       cookie-name: jwt_token
