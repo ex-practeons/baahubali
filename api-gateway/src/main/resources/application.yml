@@ -39,7 +39,7 @@ gateway:
       - /api/exams/v3/api-docs
       - /webjars/**
     jwt:
-      secret: ${JWT_SECRET:whydidkattappakillbaahubali}
+      secret: ${JWT_SECRET:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI}
       cookie-name: jwt_token
       user-id-claim: sub
       role-claim: role
