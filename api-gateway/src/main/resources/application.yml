@@ -6,17 +6,40 @@ spring:
     name: api-gateway
   config:
     import: optional:file:.env[.properties]
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 500ms
   cloud:
     gateway:
-      routes:
-        - id: iam-service
-          uri: ${IAM_SERVICE_URL:http://localhost:8081}
-          predicates:
-            - Path=/api/auth/**, /api/users/**
-        - id: exam-engine
-          uri: ${EXAM_ENGINE_URL:http://localhost:8082}
-          predicates:
-            - Path=/api/exams/**
+      server:
+        webflux:
+          routes:
+          - id: iam-auth
+            uri: ${IAM_SERVICE_URL:http://localhost:8081}
+            predicates:
+              - Path=/api/auth/**
+            filters:
+              - name: RequestRateLimiter
+                args:
+                  key-resolver: "#{@userOrIpKeyResolver}"
+                  redis-rate-limiter.replenishRate: 1
+                  redis-rate-limiter.burstCapacity: 60
+                  redis-rate-limiter.requestedTokens: 3
+
+          - id: iam-users
+            uri: ${IAM_SERVICE_URL:http://localhost:8081}
+            predicates:
+              - Path=/api/users/**
+            filters:
+              - name: RequestRateLimiter
+                args:
+                  key-resolver: "#{@userOrIpKeyResolver}"
+                  redis-rate-limiter.replenishRate: 10
+                  redis-rate-limiter.burstCapacity: 20
+                  redis-rate-limiter.requestedTokens: 1
 
 springdoc:
   swagger-ui:
@@ -45,3 +68,6 @@ gateway:
       role-claim: role
       issuer: ${JWT_ISSUER:}
       clock-skew-seconds: 30
+
+rate-limit:
+    trusted-proxy-count: ${TRUSTED_PROXY_COUNT:0}
