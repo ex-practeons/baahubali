@@ -1,7 +1,28 @@
 services:
-  api-gateway:
-    build:
-      context: .
-      dockerfile: api-gateway/Dockerfile
+  mysql:
+    image: mysql:8.0
+    container_name: baahubali-mysql
     ports:
-      - "8080:8080"
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: baahubali
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:7.0-alpine
+    container_name: baahubali-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  mysql-data:
+  redis-data:

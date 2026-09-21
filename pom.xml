@@ -20,6 +20,8 @@
 
     <modules>
         <module>api-gateway</module>
+        <module>iam-service</module>
+        <module>payment-service</module>
     </modules>
 
     <properties>

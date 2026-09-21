@@ -116,10 +116,12 @@
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
+        <!-- Temporarily disabled due to Spring Boot 4 compatibility issue
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
         </dependency>
+        -->
     </dependencies>
 
     <build>

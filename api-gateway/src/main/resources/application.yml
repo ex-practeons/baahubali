@@ -12,11 +12,15 @@ spring:
         - id: iam-service
           uri: ${IAM_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/api/auth/**, /api/users/**
+            - Path=/api/auth/**,/api/users/**
         - id: exam-engine
           uri: ${EXAM_ENGINE_URL:http://localhost:8082}
           predicates:
             - Path=/api/exams/**
+
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
 
 springdoc:
   swagger-ui:
