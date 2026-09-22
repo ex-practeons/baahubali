@@ -10,12 +10,14 @@ import com.edtech.iam.security.JwtService;
 import com.edtech.iam.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,6 +29,7 @@ public class AuthController {
     private final AuthService authService;
     private final JwtService jwtService;
     private final AuthCookieFactory authCookieFactory;
+    private final StringRedisTemplate redisTemplate;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -49,7 +52,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(@RequestHeader("X-User-Id") String userId) {
+        redisTemplate.delete("user:session:" + userId);
         ResponseCookie expiredCookie = authCookieFactory.buildExpiredAuthCookie();
 
         return ResponseEntity.ok()

@@ -30,6 +30,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = User.builder()
+                .firstName(request.firstName())
+                .lastName(request.lastName())
                 .email(normalizedEmail)
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .role(Role.STUDENT)
