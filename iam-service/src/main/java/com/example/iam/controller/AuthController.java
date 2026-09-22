@@ -1,16 +1,15 @@
 package com.example.iam.controller;
 
-import com.example.iam.dto.AuthResponse;
+import com.example.iam.dto.ApiResponse;
+import com.example.iam.dto.AuthenticationResult;
 import com.example.iam.dto.LoginRequest;
 import com.example.iam.dto.RegisterRequest;
 import com.example.iam.dto.UserResponse;
 import com.example.iam.entity.User;
 import com.example.iam.security.AuthCookieFactory;
-import com.example.iam.security.JwtService;
 import com.example.iam.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -27,38 +26,36 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final JwtService jwtService;
     private final AuthCookieFactory authCookieFactory;
-    private final StringRedisTemplate redisTemplate;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        User user = authService.register(request);
-        ResponseCookie cookie = authCookieFactory.buildAuthCookie(jwtService.generateToken(user));
-
+    public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        AuthenticationResult result = authService.register(request);
+        ResponseCookie cookie = authCookieFactory.buildAuthCookie(result.token());
+        
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new AuthResponse("Registration successful", toUserResponse(user)));
+                .body(ApiResponse.success(HttpStatus.CREATED.value(), toUserResponse(result.user())));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        User user = authService.authenticate(request);
-        ResponseCookie cookie = authCookieFactory.buildAuthCookie(jwtService.generateToken(user));
-
+    public ResponseEntity<ApiResponse<UserResponse>> login(@Valid @RequestBody LoginRequest request) {
+        AuthenticationResult result = authService.authenticate(request);
+        ResponseCookie cookie = authCookieFactory.buildAuthCookie(result.token());
+        
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(new AuthResponse("Login successful", toUserResponse(user)));
+                .body(ApiResponse.success(HttpStatus.OK.value(), toUserResponse(result.user())));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestHeader("X-User-Id") String userId) {
-        redisTemplate.delete("user:session:" + userId);
+    public ResponseEntity<ApiResponse<String>> logout(@RequestHeader("X-User-Id") String userId) {
+        authService.logout(userId);
         ResponseCookie expiredCookie = authCookieFactory.buildExpiredAuthCookie();
-
+        
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
-                .build();
+                .body(ApiResponse.success(HttpStatus.OK.value(), "Logout successful"));
     }
 
     private UserResponse toUserResponse(User user) {
