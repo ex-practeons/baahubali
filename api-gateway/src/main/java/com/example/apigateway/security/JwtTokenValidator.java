@@ -8,6 +8,9 @@ import io.jsonwebtoken.JwtParserBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+
+import java.nio.charset.StandardCharsets;
+
 import javax.crypto.SecretKey;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -61,8 +64,7 @@ public class JwtTokenValidator implements TokenValidator {
     }
 
     private static JwtParser buildParser(GatewaySecurityProperties.Jwt jwt) {
-        // Fails fast at startup on invalid Base64 or a key shorter than 256 bits.
-        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwt.secret()));
+        SecretKey key = Keys.hmacShaKeyFor(jwt.secret().getBytes(StandardCharsets.UTF_8));
 
         JwtParserBuilder builder = Jwts.parser()
                 .verifyWith(key)
