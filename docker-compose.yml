@@ -54,6 +54,16 @@ services:
   #     - backend-network
   #   depends_on:
   #     - baahubali-redis
+  swagger-ui:
+      image: swaggerapi/swagger-ui
+      container_name: platform-swagger-ui
+      restart: unless-stopped
+      ports:
+        - "8081:8080"
+      environment:
+        URLS: "[{ url: 'http://localhost:8080/api/auth/v3/api-docs', name: 'IAM Service' }]"
+      networks:
+        - backend-network
 
 networks:
   backend-network:
