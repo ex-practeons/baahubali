@@ -23,67 +23,121 @@
       ]
     },
     {
-      "name": "test_db",
-      "service": "test-service",
-      "tables": [
-        {
-          "name": "test_series",
-          "columns": [
-            { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)", "description": "Unique identifier for the test series." },
-            { "name": "title", "type": "VARCHAR(255)", "constraints": "NOT NULL", "description": "Display name of the test series." },
-            { "name": "base_price", "type": "DECIMAL(10,2)", "constraints": "NOT NULL", "description": "Standard price of the test series." },
-            { "name": "status", "type": "VARCHAR(20)", "constraints": "ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED')", "description": "Current publication state of the test series." },
-            { "name": "created_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP", "description": "Timestamp when the test series was created." },
-            { "name": "updated_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP ON UPDATE", "description": "Timestamp when the test series was last modified." },
-            { "name": "deleted_at", "type": "TIMESTAMP", "constraints": "NULLABLE", "description": "Timestamp when the test series was soft-deleted." }
-          ]
+        "name": "test_db",
+        "service": "test-service",
+        "tables": [
+            {
+            "name": "test_series",
+            "columns": [
+                { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)", "description": "Unique identifier for the test series." },
+                { "name": "title", "type": "VARCHAR(255)", "constraints": "NOT NULL", "description": "Display name of the test series." },
+                { "name": "base_price", "type": "DECIMAL(10,2)", "constraints": "NOT NULL", "description": "Standard price of the test series." },
+                { "name": "status", "type": "VARCHAR(20)", "constraints": "ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED')", "description": "Current publication state of the test series." },
+                { "name": "created_by", "type": "VARCHAR(36)", "constraints": "NOT NULL", "description": "User ID of the creator, sourced from x-user-id." },
+                { "name": "updated_by", "type": "VARCHAR(36)", "constraints": "NOT NULL", "description": "User ID of the user who last modified the test series, sourced from x-user-id." },
+                { "name": "subject_id", "type": "VARCHAR(36)", "constraints": "NULLABLE, FOREIGN KEY -> catalog.subjects.id", "description": "Optional subject/category reference used for catalog browsing." },
+                { "name": "created_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP", "description": "Timestamp when the test series was created." },
+                { "name": "updated_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP ON UPDATE", "description": "Timestamp when the test series was last modified." },
+                { "name": "deleted_at", "type": "TIMESTAMP", "constraints": "NULLABLE", "description": "Timestamp when the test series was soft-deleted." }
+            ],
+            "indexes": [
+                "INDEX(status)"
+            ]
+            },
+            {
+            "name": "mock_tests",
+            "columns": [
+                { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)" },
+                { "name": "series_id", "type": "VARCHAR(36)", "constraints": "FOREIGN KEY -> test_series.id" },
+                { "name": "title", "type": "VARCHAR(255)", "constraints": "NOT NULL" },
+                { "name": "duration_minutes", "type": "INT", "constraints": "NOT NULL" },
+                { "name": "total_marks", "type": "INT", "constraints": "NOT NULL" },
+                { "name": "status", "type": "VARCHAR(20)", "constraints": "ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED')", "description": "Current publication state of the mock test." },
+                { "name": "instructions", "type": "TEXT", "constraints": "NULLABLE", "description": "Instructions displayed to the student before starting the test." },
+                { "name": "is_free", "type": "BOOLEAN", "constraints": "DEFAULT false", "description": "Whether the mock test can be attempted without payment." },
+                { "name": "negative_marking_enabled", "type": "BOOLEAN", "constraints": "DEFAULT true", "description": "Whether negative marking is enabled for this test." },
+                { "name": "is_section_order_strict", "type": "BOOLEAN", "constraints": "DEFAULT false", "description": "If true, students cannot skip ahead or freely navigate between sections." },
+                { "name": "shuffle_sections", "type": "BOOLEAN", "constraints": "DEFAULT false", "description": "If true, sections are randomized per attempt to prevent cheating." },
+                { "name": "created_by", "type": "VARCHAR(36)", "constraints": "NOT NULL", "description": "User ID of the creator, sourced from x-user-id." },
+                { "name": "updated_by", "type": "VARCHAR(36)", "constraints": "NOT NULL", "description": "User ID of the user who last modified the mock test, sourced from x-user-id." },
+                { "name": "created_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP" },
+                { "name": "updated_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP ON UPDATE" },
+                { "name": "deleted_at", "type": "TIMESTAMP", "constraints": "NULLABLE" }
+            ],
+            "indexes": [
+                "INDEX(series_id)",
+                "INDEX(status)"
+            ]
+            },
+            {
+            "name": "sections",
+            "columns": [
+                { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)" },
+                { "name": "test_id", "type": "VARCHAR(36)", "constraints": "FOREIGN KEY -> mock_tests.id" },
+                { "name": "title", "type": "VARCHAR(255)", "constraints": "NOT NULL" },
+                { "name": "sequence_order", "type": "INT", "constraints": "NOT NULL", "description": "Structural order of the section within the test." },
+                { "name": "duration_minutes", "type": "INT", "constraints": "NULLABLE", "description": "Optional sectional time limit." },
+                { "name": "shuffle_questions", "type": "BOOLEAN", "constraints": "DEFAULT false", "description": "If true, questions inside this section are randomized per attempt." },
+                { "name": "created_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP" },
+                { "name": "updated_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP ON UPDATE" },
+                { "name": "deleted_at", "type": "TIMESTAMP", "constraints": "NULLABLE" }
+            ],
+            "indexes": [
+                "INDEX(test_id)",
+                "UNIQUE(test_id, sequence_order)"
+            ]
+            },
+            {
+            "name": "questions",
+            "description": "Reusable question bank. Questions can be reused across multiple test sections.",
+            "columns": [
+                { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)", "description": "Unique identifier for the logical question." },
+                { "name": "question_type", "type": "VARCHAR(20)", "constraints": "ENUM('MCQ', 'NUMERICAL', 'MULTI_CORRECT')", "description": "Format of the question." },
+                { "name": "question_text", "type": "TEXT", "constraints": "NOT NULL", "description": "The actual content/body of the question." },
+                { "name": "options_json", "type": "JSON", "constraints": "NULLABLE", "description": "JSON payload containing answer options, null for Numerical questions." },
+                { "name": "correct_answer", "type": "JSON", "constraints": "NOT NULL", "description": "MCQ: {\"correct\":\"B\"}; MULTI_CORRECT: {\"correct\":[\"A\",\"C\"]}; NUMERICAL: {\"value\":9.8,\"tolerance\":0.2}." },
+                { "name": "positive_marks", "type": "DECIMAL(5,2)", "constraints": "NOT NULL", "description": "Default marks awarded for a correct answer." },
+                { "name": "negative_marks", "type": "DECIMAL(5,2)", "constraints": "DEFAULT 0.00", "description": "Default marks deducted for an incorrect answer." },
+                { "name": "sequence_order", "type": "INT", "constraints": "NOT NULL", "description": "Default ordering of the question when placed in a context." },
+                { "name": "explanation", "type": "TEXT", "constraints": "NULLABLE", "description": "Explanation shown after submission/review." },
+                { "name": "difficulty", "type": "VARCHAR(20)", "constraints": "ENUM('EASY','MEDIUM','HARD'), NULLABLE", "description": "Difficulty classification of the question." },
+                { "name": "topic_tags", "type": "JSON", "constraints": "NULLABLE", "description": "Topic/tag metadata associated with the question." },
+                { "name": "created_by", "type": "VARCHAR(36)", "constraints": "NOT NULL", "description": "User ID of the creator, sourced from x-user-id." },
+                { "name": "updated_by", "type": "VARCHAR(36)", "constraints": "NOT NULL", "description": "User ID of the user who last modified the question, sourced from x-user-id." },
+                { "name": "is_locked", "type": "BOOLEAN", "constraints": "DEFAULT false", "description": "Whether the question is locked from direct modification after being used in a published test." },
+                { "name": "created_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP", "description": "Timestamp when the question was created." },
+                { "name": "updated_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP ON UPDATE", "description": "Timestamp when the question was last modified." },
+                { "name": "deleted_at", "type": "TIMESTAMP", "constraints": "NULLABLE", "description": "Timestamp when the question was soft-deleted." }
+            ]
+            },
+            {
+            "name": "section_questions",
+            "description": "Mapping table that allows reusable questions to be placed in multiple test sections.",
+            "columns": [
+                { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)" },
+                { "name": "section_id", "type": "VARCHAR(36)", "constraints": "NOT NULL, FOREIGN KEY -> sections.id" },
+                { "name": "question_id", "type": "VARCHAR(36)", "constraints": "NOT NULL, FOREIGN KEY -> questions.id" },
+                { "name": "sequence_order", "type": "INT", "constraints": "NOT NULL", "description": "Order of the question within the section." },
+                { "name": "positive_marks_override", "type": "DECIMAL(5,2)", "constraints": "NULLABLE", "description": "Optional per-test/section override for positive marks." },
+                { "name": "negative_marks_override", "type": "DECIMAL(5,2)", "constraints": "NULLABLE", "description": "Optional per-test/section override for negative marks." }
+            ],
+            "indexes": [
+                "UNIQUE(section_id, question_id)",
+                "UNIQUE(section_id, sequence_order)"
+            ]
+            },
+            {
+            "name": "question_media",
+            "columns": [
+                { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)" },
+                { "name": "question_id", "type": "VARCHAR(36)", "constraints": "NOT NULL, FOREIGN KEY -> questions.id" },
+                { "name": "media_type", "type": "VARCHAR(20)", "constraints": "ENUM('IMAGE','AUDIO','LATEX')", "description": "Type of media attached to the question." },
+                { "name": "url", "type": "VARCHAR(500)", "constraints": "NOT NULL", "description": "Location of the media resource." },
+                { "name": "position", "type": "VARCHAR(20)", "constraints": "ENUM('QUESTION','OPTION_A','OPTION_B','OPTION_C','OPTION_D','OPTION_E'), NULLABLE", "description": "Location where the media should be rendered." }
+            ]
+            }
+        ]
         },
-        {
-          "name": "mock_tests",
-          "columns": [
-            { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)" },
-            { "name": "series_id", "type": "VARCHAR(36)", "constraints": "FOREIGN KEY -> test_series.id" },
-            { "name": "title", "type": "VARCHAR(255)", "constraints": "NOT NULL" },
-            { "name": "duration_minutes", "type": "INT", "constraints": "NOT NULL" },
-            { "name": "total_marks", "type": "INT", "constraints": "NOT NULL" },
-            { "name": "is_section_order_strict", "type": "BOOLEAN", "constraints": "DEFAULT false", "description": "If true, students cannot skip ahead or freely navigate between sections." },
-            { "name": "shuffle_sections", "type": "BOOLEAN", "constraints": "DEFAULT false", "description": "If true, sections are randomized per attempt to prevent cheating." },
-            { "name": "created_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP" },
-            { "name": "updated_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP ON UPDATE" },
-            { "name": "deleted_at", "type": "TIMESTAMP", "constraints": "NULLABLE" }
-          ]
-        },
-        {
-          "name": "sections",
-          "columns": [
-            { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)" },
-            { "name": "test_id", "type": "VARCHAR(36)", "constraints": "FOREIGN KEY -> mock_tests.id" },
-            { "name": "title", "type": "VARCHAR(255)", "constraints": "NOT NULL" },
-            { "name": "sequence_order", "type": "INT", "constraints": "NOT NULL", "description": "Default structural order (1, 2, 3)." },
-            { "name": "shuffle_questions", "type": "BOOLEAN", "constraints": "DEFAULT false", "description": "If true, questions inside this section are randomized per attempt." },
-            { "name": "created_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP" },
-            { "name": "updated_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP ON UPDATE" },
-            { "name": "deleted_at", "type": "TIMESTAMP", "constraints": "NULLABLE" }
-          ]
-        },
-        {
-          "name": "questions",
-          "columns": [
-            { "name": "id", "type": "VARCHAR(36)", "constraints": "PRIMARY KEY (UUID)", "description": "Unique identifier for the question." },
-            { "name": "section_id", "type": "VARCHAR(36)", "constraints": "FOREIGN KEY -> sections.id", "description": "Reference to the section containing this question." },
-            { "name": "question_type", "type": "VARCHAR(20)", "constraints": "ENUM('MCQ', 'NUMERICAL', 'MULTI_CORRECT')", "description": "Format of the question." },
-            { "name": "question_text", "type": "TEXT", "constraints": "NOT NULL", "description": "The actual content/body of the question." },
-            { "name": "options_json", "type": "JSON", "constraints": "NULLABLE", "description": "JSON payload containing answer options, null for Numerical questions." },
-            { "name": "correct_answer", "type": "VARCHAR(255)", "constraints": "NOT NULL", "description": "The exact correct option key or numeric answer." },
-            { "name": "positive_marks", "type": "DECIMAL(5,2)", "constraints": "NOT NULL", "description": "Marks awarded for a correct answer." },
-            { "name": "negative_marks", "type": "DECIMAL(5,2)", "constraints": "DEFAULT 0.00", "description": "Marks deducted for an incorrect answer." },
-            { "name": "created_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP", "description": "Timestamp when the question was created." },
-            { "name": "updated_at", "type": "TIMESTAMP", "constraints": "DEFAULT CURRENT_TIMESTAMP ON UPDATE", "description": "Timestamp when the question was last modified." },
-            { "name": "deleted_at", "type": "TIMESTAMP", "constraints": "NULLABLE", "description": "Timestamp when the question was soft-deleted." }
-          ]
-        }
-      ]
-    },
     {
       "name": "payment_db",
       "service": "payment-service",
