@@ -1,5 +1,6 @@
 package com.example.iam.service.impl;
 
+import com.example.iam.dto.AuthenticationResult;
 import com.example.iam.dto.LoginRequest;
 import com.example.iam.dto.RegisterRequest;
 import com.example.iam.entity.Role;
@@ -7,8 +8,10 @@ import com.example.iam.entity.User;
 import com.example.iam.exception.EmailAlreadyExistsException;
 import com.example.iam.exception.InvalidCredentialsException;
 import com.example.iam.repository.UserRepository;
+import com.example.iam.security.JwtService;
 import com.example.iam.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,12 +22,13 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     @Transactional
-    public User register(RegisterRequest request) {
+    public AuthenticationResult register(RegisterRequest request) {
         String normalizedEmail = request.email().trim().toLowerCase();
-
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new EmailAlreadyExistsException(normalizedEmail);
         }
@@ -37,14 +41,16 @@ public class AuthServiceImpl implements AuthService {
                 .role(Role.STUDENT)
                 .build();
 
-        return userRepository.save(user);
+        user = userRepository.save(user);
+        String token = jwtService.generateToken(user);
+        
+        return new AuthenticationResult(user, token);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public User authenticate(LoginRequest request) {
+    public AuthenticationResult authenticate(LoginRequest request) {
         String normalizedEmail = request.email().trim().toLowerCase();
-
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(InvalidCredentialsException::new);
 
@@ -52,6 +58,12 @@ public class AuthServiceImpl implements AuthService {
             throw new InvalidCredentialsException();
         }
 
-        return user;
+        String token = jwtService.generateToken(user);
+        return new AuthenticationResult(user, token);
+    }
+
+    @Override
+    public void logout(String userId) {
+        redisTemplate.delete("user:session:" + userId);
     }
 }

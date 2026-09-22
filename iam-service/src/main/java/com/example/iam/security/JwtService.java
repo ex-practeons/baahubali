@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import io.jsonwebtoken.io.Decoders;
 import javax.crypto.SecretKey;
 import java.time.Duration;
 import java.util.Date;
@@ -30,7 +31,7 @@ public class JwtService {
     public JwtService(JwtProperties jwtProperties, StringRedisTemplate redisTemplate) {
         this.jwtProperties = jwtProperties;
         this.redisTemplate = redisTemplate;
-        this.signingKey = Keys.hmacShaKeyFor(jwtProperties.secret().getBytes());
+        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtProperties.secret()));
     }
 
     public String generateToken(User user) {

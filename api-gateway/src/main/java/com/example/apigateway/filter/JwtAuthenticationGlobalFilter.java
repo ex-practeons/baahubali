@@ -6,14 +6,11 @@ import org.springframework.core.Ordered;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
-
 import com.example.apigateway.exception.MissingTokenException;
-import com.example.apigateway.security.AuthenticatedUser;
 import com.example.apigateway.security.IdentityHeaderPropagator;
 import com.example.apigateway.security.PublicRouteMatcher;
 import com.example.apigateway.security.TokenExtractor;
 import com.example.apigateway.security.TokenValidator;
-
 import reactor.core.publisher.Mono;
 
 @Component
@@ -44,14 +41,14 @@ public class JwtAuthenticationGlobalFilter implements GlobalFilter, Ordered {
             return forward(exchange, chain, identityHeaderPropagator.sanitize(request));
         }
 
-        return Mono.fromCallable(() -> authenticate(request))
+        String token = tokenExtractor.extract(request).orElse(null);
+        if (token == null) {
+            return Mono.error(new MissingTokenException());
+        }
+
+        return tokenValidator.validate(token)
                 .map(user -> identityHeaderPropagator.propagate(request, user))
                 .flatMap(authenticatedRequest -> forward(exchange, chain, authenticatedRequest));
-    }
-
-    private AuthenticatedUser authenticate(ServerHttpRequest request) {
-        String token = tokenExtractor.extract(request).orElseThrow(MissingTokenException::new);
-        return tokenValidator.validate(token);
     }
 
     private Mono<Void> forward(ServerWebExchange exchange, GatewayFilterChain chain, ServerHttpRequest request) {
