@@ -1,28 +1,63 @@
-services:
-  mysql:
-    image: mysql:8.0
-    container_name: baahubali-mysql
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: baahubali
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - mysql-data:/var/lib/mysql
+version: '3.8'
 
-  redis:
-    image: redis:7.0-alpine
+services:
+  baahubali-redis:
+    image: redis:7-alpine
     container_name: baahubali-redis
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
+    command: redis-server --appendonly yes
     volumes:
-      - redis-data:/data
+      - redis_prod_data:/data
+    networks:
+      - backend-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+      - ./api-gateway/.env
+    networks:
+      - backend-network
+    depends_on:
+      - baahubali-redis
+
+  iam-service:
+    build:
+      context: .
+      dockerfile: iam-service/Dockerfile
+    container_name: iam-service
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ./iam-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      - baahubali-redis
+
+  # test-service:
+  #   build:
+  #     context: .
+  #     dockerfile: test-service/Dockerfile
+  #   container_name: test-service
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env
+  #     - ./test-service/.env
+  #   networks:
+  #     - backend-network
+  #   depends_on:
+  #     - baahubali-redis
+
+networks:
+  backend-network:
+    driver: bridge
 
 volumes:
-  mysql-data:
-  redis-data:
+  redis_prod_data:

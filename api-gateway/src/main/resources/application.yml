@@ -4,19 +4,27 @@ server:
 spring:
   application:
     name: api-gateway
-  config:
-    import: optional:file:.env[.properties]
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   cloud:
     gateway:
-      routes:
-        - id: iam-service
-          uri: ${IAM_SERVICE_URL:http://localhost:8081}
-          predicates:
-            - Path=/api/auth/**,/api/users/**
-        - id: exam-engine
-          uri: ${EXAM_ENGINE_URL:http://localhost:8082}
-          predicates:
-            - Path=/api/exams/**
+      server:
+        webflux:
+          routes:
+            - id: iam-service-auth
+              uri: ${IAM_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/auth/**
+            - id: iam-service-users
+              uri: ${IAM_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/users/**
+            - id: test-service
+              uri: ${TEST_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/tests/**
 
 logging:
   level:
@@ -44,7 +52,7 @@ gateway:
       - /webjars/**
     jwt:
       secret: ${JWT_SECRET:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI}
-      cookie-name: jwt_token
+      cookie-name: ACCESS_TOKEN
       user-id-claim: sub
       role-claim: role
       issuer: ${JWT_ISSUER:}

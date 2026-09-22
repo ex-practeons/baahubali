@@ -21,7 +21,6 @@
     <modules>
         <module>api-gateway</module>
         <module>iam-service</module>
-        <module>payment-service</module>
         <module>test-service</module>
     </modules>
 

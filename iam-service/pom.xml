@@ -11,7 +11,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.edtech</groupId>
+    <groupId>com.example</groupId>
     <artifactId>iam-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>iam-service</name>
