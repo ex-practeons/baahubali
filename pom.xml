@@ -16,10 +16,11 @@
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>testing-platform</name>
-    <description>Multi-module Spring Boot parent project (api-gateway, payment-service)</description>
+    <description>Multi-module Spring Boot parent project</description>
 
     <modules>
         <module>api-gateway</module>
+        <module>test-service</module>
     </modules>
 
     <properties>
