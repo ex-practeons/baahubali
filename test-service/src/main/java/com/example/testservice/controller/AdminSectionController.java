@@ -2,6 +2,7 @@ package com.example.testservice.controller;
 
 import com.example.testservice.dto.ApiResponse;
 import com.example.testservice.dto.admin.BulkAttachQuestionsDto;
+import com.example.testservice.dto.admin.AdminSectionDetailDto;
 import com.example.testservice.dto.admin.SectionCreateDto;
 import com.example.testservice.service.admin.impl.AdminSectionServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -21,12 +22,13 @@ public class AdminSectionController {
     private final AdminSectionServiceImpl adminSectionService;
 
     @PostMapping("/mock-tests/{testId}/sections")
-    public ResponseEntity<ApiResponse<UUID>> createSection(
+    public ResponseEntity<ApiResponse<AdminSectionDetailDto>> createSection(
             @PathVariable UUID testId,
             @RequestBody SectionCreateDto request,
             @RequestHeader("x-user-id") String adminId) {
         UUID sectionId = adminSectionService.createSection(testId, request, adminId);
-        return ResponseEntity.status(201).body(ApiResponse.success(sectionId));
+        AdminSectionDetailDto response = adminSectionService.getSectionDetail(sectionId);
+        return ResponseEntity.status(201).body(ApiResponse.success(201, response));
     }
 
     @PutMapping("/mock-tests/{testId}/sections/reorder")

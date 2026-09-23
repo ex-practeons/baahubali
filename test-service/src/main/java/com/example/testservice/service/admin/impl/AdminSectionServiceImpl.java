@@ -1,6 +1,7 @@
 package com.example.testservice.service.admin.impl;
 
 import com.example.testservice.dto.admin.BulkAttachQuestionsDto;
+import com.example.testservice.dto.admin.AdminSectionDetailDto;
 import com.example.testservice.dto.admin.SectionCreateDto;
 import com.example.testservice.entity.*;
 import com.example.testservice.exception.ResourceConflictException;
@@ -94,6 +95,24 @@ public class AdminSectionServiceImpl {
         section.setUpdatedBy(adminId);
 
         return sectionRepository.save(section).getId();
+    }
+
+    @Transactional(readOnly = true)
+    public AdminSectionDetailDto getSectionDetail(UUID sectionId) {
+        Section section = sectionRepository.findById(sectionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
+
+        return new AdminSectionDetailDto(
+                section.getId(),
+                section.getMockTest().getId(),
+                section.getTitle(),
+                section.getSequenceOrder(),
+                section.getDurationMinutes(),
+                section.isShuffleQuestions(),
+                section.getSectionQuestions().size(),
+                section.getCreatedAt(),
+                section.getUpdatedAt()
+        );
     }
     
     @Transactional
