@@ -22,12 +22,13 @@ public class AdminQuestionController {
     private final AdminQuestionServiceImpl adminQuestionService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UUID>> createQuestion(
+    public ResponseEntity<ApiResponse<QuestionDetailDto>> createQuestion(
             @RequestBody QuestionCreateDto request,
             @RequestHeader("x-user-id") String adminId) {
         
         UUID questionId = adminQuestionService.createQuestion(request, adminId);
-        return ResponseEntity.status(201).body(ApiResponse.success(questionId));
+        QuestionDetailDto response = adminQuestionService.getQuestionById(questionId);
+        return ResponseEntity.status(201).body(ApiResponse.success(201, response));
     }
 
     @GetMapping
