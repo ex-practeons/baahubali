@@ -1,61 +1,50 @@
 package com.example.testservice.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import com.example.testservice.entity.converter.MapStringJsonConverter;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "questions")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
+@Getter
+@Setter
+@SQLRestriction("deleted_at IS NULL")
 public class Question extends BaseEntity {
 
-    @Id
-    private String id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "section_id")
-    private Section section;
-
     @Enumerated(EnumType.STRING)
-    @Column(name = "question_type")
+    @Column(name = "question_type", nullable = false, updatable = false)
     private QuestionType questionType;
 
-    @Builder.Default
-    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.List<QuestionTranslation> translations = new java.util.ArrayList<>();
+    @Convert(converter = MapStringJsonConverter.class)
+    @Column(name = "correct_answer_json", columnDefinition = "JSON", nullable = false)
+    private Map<String, Object> correctAnswerJson;
 
-    @Column(name = "correct_answer", nullable = false)
-    private String correctAnswer;
-
-    @Column(name = "positive_marks", nullable = false)
+    @Column(name = "positive_marks", precision = 10, scale = 2, nullable = false)
     private BigDecimal positiveMarks;
 
-    @Column(name = "negative_marks")
+    @Column(name = "negative_marks", precision = 10, scale = 2, nullable = false)
     private BigDecimal negativeMarks;
+
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
 
     @Enumerated(EnumType.STRING)
     private Difficulty difficulty;
 
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
+    @Column(name = "is_locked", nullable = false)
+    private boolean isLocked = false;
+
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SectionQuestion> sectionQuestions = new ArrayList<>();
+
+    // Added Translations Mapping
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<QuestionTranslation> translations = new ArrayList<>();
 }

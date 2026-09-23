@@ -1,62 +1,65 @@
 package com.example.testservice.controller;
 
-import com.example.testservice.dto.TestSeriesDto;
-import com.example.testservice.service.TestSeriesService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
 import com.example.testservice.dto.ApiResponse;
+import com.example.testservice.dto.admin.TestSeriesCreateDto;
+import com.example.testservice.dto.admin.TestSeriesDetailDto;
+import com.example.testservice.dto.admin.TestSeriesListDto;
+import com.example.testservice.dto.admin.TestSeriesUpdateDto;
+import com.example.testservice.dto.common.PaginatedResponseDto;
+import com.example.testservice.service.admin.impl.AdminTestSeriesServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/admin/test-series")
+@RequestMapping("/admin/series")
 @RequiredArgsConstructor
 public class AdminTestSeriesController {
-    private final TestSeriesService testSeriesService;
 
-    private void checkAdmin(String role) {
-        if (!"ADMIN".equals(role)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied");
-        }
-    }
+    private final AdminTestSeriesServiceImpl adminTestSeriesService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<TestSeriesDto>> createTestSeries(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                          @RequestBody TestSeriesDto request) {
-        checkAdmin(role);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED.value(), testSeriesService.createTestSeries(request)));
+    public ResponseEntity<ApiResponse<UUID>> createSeries(
+            @RequestBody TestSeriesCreateDto request,
+            @RequestHeader("x-user-id") String adminId) {
+            
+        UUID seriesId = adminTestSeriesService.createSeries(request, adminId);
+        return ResponseEntity.status(201).body(ApiResponse.success(seriesId));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<PaginatedResponseDto<TestSeriesListDto>>> getSeriesList(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit) {
+            
+        var response = adminTestSeriesService.getSeriesList(search, status, categoryId, page, limit);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<TestSeriesDetailDto>> getSeriesById(@PathVariable UUID id) {
+        TestSeriesDetailDto response = adminTestSeriesService.getSeriesById(id);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<TestSeriesDto>> updateTestSeries(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                          @PathVariable String id, 
-                                          @RequestBody TestSeriesDto request) {
-        checkAdmin(role);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), testSeriesService.updateTestSeries(id, request)));
+    public ResponseEntity<ApiResponse<String>> updateSeries(
+            @PathVariable UUID id,
+            @RequestBody TestSeriesUpdateDto request,
+            @RequestHeader("x-user-id") String adminId) {
+            
+        adminTestSeriesService.updateSeries(id, request, adminId);
+        return ResponseEntity.ok(ApiResponse.success("Test Series updated successfully"));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteTestSeries(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                 @PathVariable String id) {
-        checkAdmin(role);
-        testSeriesService.deleteTestSeries(id);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Deleted successfully"));
-    }
-
-    @PatchMapping("/{id}/publish")
-    public ResponseEntity<ApiResponse<TestSeriesDto>> publishTestSeries(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                           @PathVariable String id) {
-        checkAdmin(role);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), testSeriesService.publish(id)));
-    }
-
-    @PatchMapping("/{id}/unpublish")
-    public ResponseEntity<ApiResponse<TestSeriesDto>> unpublishTestSeries(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                             @PathVariable String id) {
-        checkAdmin(role);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), testSeriesService.unpublish(id)));
+    public ResponseEntity<ApiResponse<String>> deleteSeries(@PathVariable UUID id) {
+        adminTestSeriesService.deleteSeries(id);
+        return ResponseEntity.ok(ApiResponse.success("Test Series soft-deleted successfully"));
     }
 }

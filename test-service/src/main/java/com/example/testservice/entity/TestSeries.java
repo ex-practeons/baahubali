@@ -1,53 +1,36 @@
 package com.example.testservice.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Convert;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "test_series")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
+@Getter
+@Setter
+@SQLRestriction("deleted_at IS NULL") // Auto-filters soft-deleted series
 public class TestSeries extends BaseEntity {
 
-    @Id
-    private String id;
+    @Column(nullable = false)
+    private String title;
+
+    @Column(name = "base_price", precision = 10, scale = 2)
+    private BigDecimal basePrice = BigDecimal.ZERO;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
-    @Convert(converter = com.example.testservice.entity.converter.MapStringJsonConverter.class)
-    @Column(name = "title_translations", columnDefinition = "json", nullable = false)
-    private java.util.Map<String, String> titleTranslations;
-
-    @Column(name = "base_price", nullable = false)
-    private BigDecimal basePrice;
-
-    @Column(name = "is_free")
-    private Boolean isFree;
-
     @Enumerated(EnumType.STRING)
-    private Status status;
+    @Column(nullable = false)
+    private Status status = Status.DRAFT;
 
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
+    @OneToMany(mappedBy = "series", cascade = CascadeType.ALL, orphanRemoval = true)
+    @SQLRestriction("deleted_at IS NULL")
+    private List<MockTest> mockTests = new ArrayList<>();
 }

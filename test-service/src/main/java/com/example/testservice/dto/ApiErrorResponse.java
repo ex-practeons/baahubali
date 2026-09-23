@@ -1,14 +1,7 @@
 package com.example.testservice.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import java.util.List;
 
-import java.time.Instant;
-
-@Data
-@AllArgsConstructor
-public class ApiErrorResponse {
-    private String error;
-    private String code;
-    private String message;
+public record ApiErrorResponse(ErrorPayload error) {
+    public record ErrorPayload(String code, String message, List<String> details) {}
 }

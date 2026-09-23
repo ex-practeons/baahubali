@@ -1,55 +1,82 @@
 package com.example.testservice.controller;
 
-import com.example.testservice.dto.MockTestDto;
-import com.example.testservice.service.MockTestService;
+import com.example.testservice.dto.ApiResponse;
+import com.example.testservice.service.admin.impl.AdminMockTestServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.example.testservice.dto.ApiResponse;
-import org.springframework.http.ResponseEntity;
+import java.time.Instant;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/admin/mock-tests")
 @RequiredArgsConstructor
 public class AdminMockTestController {
-    private final MockTestService mockTestService;
 
-    private void checkAdmin(String role) {
-        if (!"ADMIN".equals(role)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied");
-        }
+    private final AdminMockTestServiceImpl adminMockTestService;
+
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<ApiResponse<String>> publishTest(
+            @PathVariable UUID id,
+            @RequestHeader(value = "If-Match", required = true) Instant expectedUpdatedAt) {
+        
+        adminMockTestService.publishTest(id, expectedUpdatedAt);
+        return ResponseEntity.ok(ApiResponse.success("Test published successfully"));
     }
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<MockTestDto>> createMockTest(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                      @RequestBody MockTestDto request) {
-        checkAdmin(role);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED.value(), mockTestService.createMockTest(request)));
+    @PostMapping("/series/{seriesId}/mock-tests")
+    public ResponseEntity<ApiResponse<UUID>> createMockTest(
+            @PathVariable UUID seriesId,
+            @RequestBody com.example.testservice.dto.admin.MockTestCreateDto request,
+            @RequestHeader("x-user-id") String adminId) {
+        
+        UUID testId = adminMockTestService.createMockTest(seriesId, request, adminId);
+        return ResponseEntity.status(201).body(ApiResponse.success(testId));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<MockTestDto>> updateMockTest(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                      @PathVariable String id, 
-                                      @RequestBody MockTestDto request) {
-        checkAdmin(role);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), mockTestService.updateMockTest(id, request)));
+    public ResponseEntity<ApiResponse<String>> updateMockTest(
+            @PathVariable UUID id,
+            @RequestBody com.example.testservice.dto.admin.MockTestCreateDto request) {
+        
+        adminMockTestService.updateMockTest(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Test updated successfully"));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteMockTest(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                               @PathVariable String id) {
-        checkAdmin(role);
-        mockTestService.deleteMockTest(id);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), "Deleted successfully"));
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<com.example.testservice.dto.publiccatalog.PublicMockTestStructureDto>> getMockTestSummary(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(adminMockTestService.getMockTestSummary(id)));
     }
 
-    @PatchMapping("/{id}/publish")
-    public ResponseEntity<ApiResponse<MockTestDto>> publishMockTest(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                       @PathVariable String id) {
-        checkAdmin(role);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), mockTestService.publish(id)));
+    @GetMapping("/{id}/answer-key")
+    public ResponseEntity<ApiResponse<com.example.testservice.dto.internal.TestBlueprintDto>> getMockTestAnswerKey(
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(adminMockTestService.getTestWithAnswers(id))); 
+    }
+
+    @PostMapping("/{id}/archive")
+    public ResponseEntity<ApiResponse<String>> archiveTest(@PathVariable UUID id) {
+        adminMockTestService.archiveTest(id);
+        return ResponseEntity.ok(ApiResponse.success("Test archived successfully"));
+    }
+
+    @PostMapping("/{id}/clone")
+    public ResponseEntity<ApiResponse<UUID>> cloneTest(
+            @PathVariable UUID id,
+            @RequestBody java.util.Map<String, String> body,
+            @RequestHeader("x-user-id") String adminId) {
+        
+        String newTitle = body.get("newTitle");
+        UUID clonedId = adminMockTestService.cloneTest(id, newTitle, adminId);
+        return ResponseEntity.ok(ApiResponse.success(clonedId));
+    }
+
+    @PatchMapping("/{id}/revert-to-draft")
+    public ResponseEntity<ApiResponse<String>> revertToDraft(@PathVariable UUID id) {
+        adminMockTestService.revertToDraft(id);
+        return ResponseEntity.ok(ApiResponse.success("Test reverted to DRAFT"));
     }
 }

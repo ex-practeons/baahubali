@@ -1,47 +1,37 @@
 package com.example.testservice.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.Convert;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "sections")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
+@Getter
+@Setter
+@SQLRestriction("deleted_at IS NULL")
 public class Section extends BaseEntity {
 
-    @Id
-    private String id;
+    @Column(nullable = false)
+    private String title;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "test_id")
-    private MockTest test;
-
-    @Convert(converter = com.example.testservice.entity.converter.MapStringJsonConverter.class)
-    @Column(name = "title_translations", columnDefinition = "json", nullable = false)
-    private java.util.Map<String, String> titleTranslations;
+    @JoinColumn(name = "test_id", nullable = false)
+    private MockTest mockTest;
 
     @Column(name = "sequence_order", nullable = false)
     private Integer sequenceOrder;
 
-    @Column(name = "shuffle_questions")
-    private Boolean shuffleQuestions;
+    @Column(name = "duration_minutes")
+    private Integer durationMinutes;
 
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
+    @Column(name = "shuffle_questions")
+    private boolean shuffleQuestions;
+
+    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sequenceOrder ASC")
+    private List<SectionQuestion> sectionQuestions = new ArrayList<>();
 }

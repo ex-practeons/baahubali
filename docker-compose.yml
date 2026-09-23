@@ -10,6 +10,28 @@ services:
       - redis_prod_data:/data
     networks:
       - backend-network
+  
+  baahubali-kafka:
+    image: apache/kafka:latest
+    container_name: baahubali-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://baahubali-kafka:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@baahubali-kafka:9093'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      CLUSTER_ID: 'Mk3OEYBSD3TfxwNWRZM0A'
+    networks:
+      - backend-network
 
   api-gateway:
     build:
@@ -41,19 +63,20 @@ services:
     depends_on:
       - baahubali-redis
 
-  # test-service:
-  #   build:
-  #     context: .
-  #     dockerfile: test-service/Dockerfile
-  #   container_name: test-service
-  #   restart: unless-stopped
-  #   env_file:
-  #     - .env
-  #     - ./test-service/.env
-  #   networks:
-  #     - backend-network
-  #   depends_on:
-  #     - baahubali-redis
+  test-service:
+    build:
+      context: .
+      dockerfile: test-service/Dockerfile
+    container_name: test-service
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ./test-service/.env
+    networks:
+      - backend-network
+    depends_on:
+      - baahubali-redis
+      - baahubali-kafka
 
 networks:
   backend-network:

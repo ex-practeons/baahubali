@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.Instant;
 
 @Data
@@ -19,6 +18,14 @@ public class ApiResponse<T> {
     public static <T> ApiResponse<T> success(int status, T data) {
         return ApiResponse.<T>builder()
                 .status(status)
+                .data(data)
+                .timestamp(Instant.now().toString())
+                .build();
+    }
+
+    public static <T> ApiResponse<T> success(T data) {
+        return ApiResponse.<T>builder()
+                .status(200)
                 .data(data)
                 .timestamp(Instant.now().toString())
                 .build();

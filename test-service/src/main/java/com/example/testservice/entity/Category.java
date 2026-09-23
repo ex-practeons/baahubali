@@ -1,7 +1,6 @@
 package com.example.testservice.entity;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Column;
@@ -19,12 +18,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Category extends BaseEntity {
-
-    @Id
-    private String id;
-
+    // Removed duplicate @Id String id; it now inherits UUID from BaseEntity
+    
     private String name;
-
     private String description;
 
     @Convert(converter = com.example.testservice.entity.converter.ListStringJsonConverter.class)

@@ -1,58 +1,68 @@
 package com.example.testservice.controller;
 
-import com.example.testservice.dto.QuestionCreateRequest;
-import com.example.testservice.dto.QuestionPublicDto;
-import com.example.testservice.service.QuestionService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.example.testservice.dto.ApiResponse;
+import com.example.testservice.dto.admin.QuestionCreateDto;
+import com.example.testservice.dto.admin.QuestionDetailDto;
+import com.example.testservice.dto.admin.QuestionListDto;
+import com.example.testservice.dto.admin.QuestionUpdateDto;
+import com.example.testservice.dto.admin.QuestionUpdateResponseDto;
+import com.example.testservice.dto.common.PaginatedResponseDto;
+import com.example.testservice.service.admin.impl.AdminQuestionServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/admin/questions")
 @RequiredArgsConstructor
 public class AdminQuestionController {
-    private final QuestionService questionService;
 
-    private void checkAdmin(String role) {
-        if (!"ADMIN".equals(role)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied");
-        }
+    private final AdminQuestionServiceImpl adminQuestionService;
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<UUID>> createQuestion(
+            @RequestBody QuestionCreateDto request,
+            @RequestHeader("x-user-id") String adminId) {
+        
+        UUID questionId = adminQuestionService.createQuestion(request, adminId);
+        return ResponseEntity.status(201).body(ApiResponse.success(questionId));
     }
 
-    @PostMapping("/sections/{sectionId}/questions")
-    public ResponseEntity<ApiResponse<QuestionPublicDto>> createQuestion(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                            @PathVariable String sectionId, 
-                                            @Valid @RequestBody QuestionCreateRequest request) {
-        checkAdmin(role);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED.value(), questionService.createQuestion(sectionId, request)));
+    @GetMapping
+    public ResponseEntity<ApiResponse<PaginatedResponseDto<QuestionListDto>>> getQuestions(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String difficulty,
+            @RequestParam(required = false) Boolean isLocked,
+            @RequestParam(required = false) Boolean unused,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit) {
+        
+        var response = adminQuestionService.getQuestions(search, type, difficulty, isLocked, unused, page, limit);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @PostMapping("/sections/{sectionId}/questions/bulk")
-    public ResponseEntity<ApiResponse<List<QuestionPublicDto>>> createQuestionsBulk(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                                       @PathVariable String sectionId, 
-                                                       @Valid @RequestBody List<QuestionCreateRequest> requests) {
-        checkAdmin(role);
-        List<QuestionPublicDto> result = requests.stream()
-                .map(req -> questionService.createQuestion(sectionId, req))
-                .collect(Collectors.toList());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(HttpStatus.CREATED.value(), result));
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<QuestionDetailDto>> getQuestion(@PathVariable UUID id) {
+        QuestionDetailDto response = adminQuestionService.getQuestionById(id);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @PutMapping("/questions/{id}")
-    public ResponseEntity<ApiResponse<QuestionPublicDto>> updateQuestion(@RequestHeader(value = "X-User-Role", required = false) String role, 
-                                            @PathVariable String id, 
-                                            @Valid @RequestBody QuestionCreateRequest request) {
-        checkAdmin(role);
-        return ResponseEntity.ok(ApiResponse.success(HttpStatus.OK.value(), questionService.updateQuestion(id, request)));
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<QuestionUpdateResponseDto>> updateQuestion(
+            @PathVariable UUID id,
+            @RequestBody QuestionUpdateDto request,
+            @RequestHeader("x-user-id") String adminId) { // FIX: Added adminId parameter
+        
+        QuestionUpdateResponseDto response = adminQuestionService.updateQuestion(id, request, adminId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteQuestion(@PathVariable UUID id) {
+        adminQuestionService.deleteQuestion(id);
+        return ResponseEntity.ok(ApiResponse.success("Question soft-deleted successfully"));
     }
 }
