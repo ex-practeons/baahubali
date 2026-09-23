@@ -42,11 +42,13 @@ public class AdminSectionController {
     // --- Question Mapping Operations ---
 
     @PostMapping("/sections/{id}/questions")
-    public ResponseEntity<ApiResponse<String>> attachQuestionsToSection(
+    public ResponseEntity<ApiResponse<AdminSectionDetailDto>> attachQuestionsToSection(
             @PathVariable UUID id,
-            @RequestBody BulkAttachQuestionsDto request) {
-        adminSectionService.attachQuestions(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Questions attached successfully"));
+            @RequestBody BulkAttachQuestionsDto request,
+            @RequestHeader("x-user-id") String adminId) {
+        adminSectionService.attachQuestions(id, request, adminId);
+        AdminSectionDetailDto response = adminSectionService.getSectionDetail(id);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("/sections/{sectionId}/questions/{questionId}")

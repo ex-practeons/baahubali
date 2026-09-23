@@ -28,7 +28,7 @@ public class AdminSectionServiceImpl {
     private final MockTestRepository mockTestRepository;
 
     @Transactional
-    public void attachQuestions(UUID sectionId, BulkAttachQuestionsDto request) {
+    public void attachQuestions(UUID sectionId, BulkAttachQuestionsDto request, String adminId) {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
 
@@ -62,6 +62,8 @@ public class AdminSectionServiceImpl {
             sq.setSequenceOrder(currentMaxSequence);
             sq.setPositiveMarksOverride(request.positiveMarksOverride());
             sq.setNegativeMarksOverride(request.negativeMarksOverride());
+            sq.setCreatedBy(adminId);
+            sq.setUpdatedBy(adminId);
             
             sectionQuestionRepository.save(sq);
         }
