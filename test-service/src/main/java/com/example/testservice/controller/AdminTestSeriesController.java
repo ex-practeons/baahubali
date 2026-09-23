@@ -21,12 +21,13 @@ public class AdminTestSeriesController {
     private final AdminTestSeriesServiceImpl adminTestSeriesService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UUID>> createSeries(
+    public ResponseEntity<ApiResponse<TestSeriesDetailDto>> createSeries(
             @RequestBody TestSeriesCreateDto request,
             @RequestHeader("x-user-id") String adminId) {
             
         UUID seriesId = adminTestSeriesService.createSeries(request, adminId);
-        return ResponseEntity.status(201).body(ApiResponse.success(seriesId));
+        TestSeriesDetailDto response = adminTestSeriesService.getSeriesById(seriesId);
+        return ResponseEntity.status(201).body(ApiResponse.success(201, response));
     }
 
     @GetMapping
