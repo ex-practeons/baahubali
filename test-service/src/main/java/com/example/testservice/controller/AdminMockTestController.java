@@ -49,8 +49,8 @@ public class AdminMockTestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<com.example.testservice.dto.publiccatalog.PublicMockTestStructureDto>> getMockTestSummary(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(adminMockTestService.getMockTestSummary(id)));
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> getMockTestSummary(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(adminMockTestService.getAdminMockTestDetail(id)));
     }
 
     @GetMapping("/{id}/answer-key")
