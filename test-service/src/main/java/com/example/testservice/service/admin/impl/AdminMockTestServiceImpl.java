@@ -2,6 +2,7 @@ package com.example.testservice.service.admin.impl;
 
 import com.example.testservice.client.AttemptServiceClient;
 import com.example.testservice.dto.admin.MockTestCreateDto;
+import com.example.testservice.dto.admin.AdminMockTestDetailDto;
 import com.example.testservice.dto.event.TestPublishedEvent;
 import com.example.testservice.dto.internal.QuestionBlueprintDto;
 import com.example.testservice.dto.internal.QuestionTranslationBlueprintDto;
@@ -146,6 +147,39 @@ public class AdminMockTestServiceImpl {
         test.setUpdatedBy(adminId);
 
         return mockTestRepository.save(test).getId();
+    }
+
+    @Transactional(readOnly = true)
+    public AdminMockTestDetailDto getAdminMockTestDetail(UUID testId) {
+        MockTest test = mockTestRepository.findById(testId)
+                .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
+
+        return new AdminMockTestDetailDto(
+                test.getId(),
+                test.getSeries().getId(),
+                test.getTitle(),
+                test.getDurationMinutes(),
+                test.getStatus(),
+                test.getTotalMarks(),
+                test.isSectionOrderStrict(),
+                test.isShuffleSections(),
+                test.isNegativeMarkingEnabled(),
+                test.getInstructions(),
+                test.isFree(),
+                test.getPublishedAt(),
+                test.getCreatedAt(),
+                test.getUpdatedAt(),
+                test.getSections().stream()
+                        .map(section -> new AdminMockTestDetailDto.SectionSummaryDto(
+                                section.getId(),
+                                section.getTitle(),
+                                section.getSequenceOrder(),
+                                section.getDurationMinutes(),
+                                section.isShuffleQuestions(),
+                                section.getSectionQuestions().size()
+                        ))
+                        .toList()
+        );
     }
 
     @Transactional

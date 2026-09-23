@@ -1,6 +1,7 @@
 package com.example.testservice.controller;
 
 import com.example.testservice.dto.ApiResponse;
+import com.example.testservice.dto.admin.AdminMockTestDetailDto;
 import com.example.testservice.service.admin.impl.AdminMockTestServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,13 +29,14 @@ public class AdminMockTestController {
     }
 
     @PostMapping("/series/{seriesId}/mock-tests")
-    public ResponseEntity<ApiResponse<UUID>> createMockTest(
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> createMockTest(
             @PathVariable UUID seriesId,
             @RequestBody com.example.testservice.dto.admin.MockTestCreateDto request,
             @RequestHeader("x-user-id") String adminId) {
         
         UUID testId = adminMockTestService.createMockTest(seriesId, request, adminId);
-        return ResponseEntity.status(201).body(ApiResponse.success(testId));
+        AdminMockTestDetailDto response = adminMockTestService.getAdminMockTestDetail(testId);
+        return ResponseEntity.status(201).body(ApiResponse.success(201, response));
     }
 
     @PutMapping("/{id}")
