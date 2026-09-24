@@ -40,5 +40,3 @@ app:
     cookie-domain: ${COOKIE_DOMAIN:}
     cookie-secure: ${COOKIE_SECURE:true}
     cookie-same-site: ${COOKIE_SAME_SITE:Strict}
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
