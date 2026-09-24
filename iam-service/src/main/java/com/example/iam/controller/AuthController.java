@@ -5,7 +5,6 @@ import com.example.iam.dto.AuthenticationResult;
 import com.example.iam.dto.LoginRequest;
 import com.example.iam.dto.RegisterRequest;
 import com.example.iam.dto.UserResponse;
-import com.example.iam.entity.User;
 import com.example.iam.security.AuthCookieFactory;
 import com.example.iam.service.AuthService;
 import jakarta.validation.Valid;
@@ -19,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -35,7 +36,11 @@ public class AuthController {
         
         return ResponseEntity.status(HttpStatus.CREATED)
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(ApiResponse.success(HttpStatus.CREATED.value(), toUserResponse(result.user())));
+                .body(ApiResponse.success(
+                        HttpStatus.CREATED.value(),
+                        "Account registered successfully",
+                        UserResponse.from(result.user())
+                ));
     }
 
     @PostMapping("/login")
@@ -45,20 +50,20 @@ public class AuthController {
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(ApiResponse.success(HttpStatus.OK.value(), toUserResponse(result.user())));
+                .body(ApiResponse.success(
+                        HttpStatus.OK.value(),
+                        "Login successful",
+                        UserResponse.from(result.user())
+                ));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<String>> logout(@RequestHeader("X-User-Id") String userId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> logout(@RequestHeader("X-User-Id") String userId) {
         authService.logout(userId);
         ResponseCookie expiredCookie = authCookieFactory.buildExpiredAuthCookie();
         
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, expiredCookie.toString())
-                .body(ApiResponse.success(HttpStatus.OK.value(), "Logout successful"));
-    }
-
-    private UserResponse toUserResponse(User user) {
-        return new UserResponse(user.getId(), user.getEmail(), user.getRole(), user.getCreatedAt());
+                .body(ApiResponse.success(HttpStatus.OK.value(), "Logout successful", Map.of()));
     }
 }
