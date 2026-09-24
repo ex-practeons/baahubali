@@ -46,7 +46,7 @@ public class AdminTestSeriesServiceImpl {
     }
 
     @Transactional
-    public void deleteSeries(UUID seriesId) {
+    public TestSeriesDetailDto deleteSeries(UUID seriesId) {
         TestSeries series = testSeriesRepository.findById(seriesId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test Series not found"));
 
@@ -62,6 +62,7 @@ public class AdminTestSeriesServiceImpl {
         series.setDeletedAt(java.time.Instant.now());
         series.getMockTests().forEach(test -> test.setDeletedAt(java.time.Instant.now()));
         testSeriesRepository.save(series);
+        return getSeriesById(seriesId);
     }
 
     @Transactional(readOnly = true)
@@ -132,7 +133,7 @@ public class AdminTestSeriesServiceImpl {
     }
 
     @Transactional
-    public void updateSeries(UUID id, TestSeriesUpdateDto dto, String adminId) {
+    public TestSeriesDetailDto updateSeries(UUID id, TestSeriesUpdateDto dto, String adminId) {
         TestSeries series = testSeriesRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Test Series not found"));
 
@@ -148,5 +149,6 @@ public class AdminTestSeriesServiceImpl {
         series.setUpdatedBy(adminId);
         
         testSeriesRepository.save(series);
+        return getSeriesById(id);
     }
 }

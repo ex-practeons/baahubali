@@ -28,7 +28,7 @@ public class AdminSectionServiceImpl {
     private final MockTestRepository mockTestRepository;
 
     @Transactional
-    public void attachQuestions(UUID sectionId, BulkAttachQuestionsDto request, String adminId) {
+    public AdminSectionDetailDto attachQuestions(UUID sectionId, BulkAttachQuestionsDto request, String adminId) {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
 
@@ -70,6 +70,7 @@ public class AdminSectionServiceImpl {
         
         // Touch the parent test's updated_at timestamp to invalidate caches and increment version
         section.getMockTest().setUpdatedAt(java.time.Instant.now());
+        return getSectionDetail(sectionId);
     }
 
     @Transactional
@@ -113,12 +114,18 @@ public class AdminSectionServiceImpl {
                 section.isShuffleQuestions(),
                 section.getSectionQuestions().size(),
                 section.getCreatedAt(),
-                section.getUpdatedAt()
+                section.getUpdatedAt(),
+                section.getSectionQuestions().stream()
+                        .sorted(java.util.Comparator.comparingInt(SectionQuestion::getSequenceOrder))
+                        .map(sq -> new AdminSectionDetailDto.QuestionMappingDto(
+                                sq.getQuestion().getId(), sq.getSequenceOrder(),
+                                sq.getPositiveMarksOverride(), sq.getNegativeMarksOverride()))
+                        .toList()
         );
     }
     
     @Transactional
-    public void reorderSections(UUID testId, java.util.List<UUID> orderedSectionIds) {
+    public List<AdminSectionDetailDto> reorderSections(UUID testId, java.util.List<UUID> orderedSectionIds) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ResourceNotFoundException("Mock Test not found"));
 
@@ -143,10 +150,14 @@ public class AdminSectionServiceImpl {
         // Touch test updated_at
         test.setUpdatedAt(java.time.Instant.now());
         mockTestRepository.save(test);
+        return test.getSections().stream()
+                .sorted(java.util.Comparator.comparingInt(Section::getSequenceOrder))
+                .map(section -> getSectionDetail(section.getId()))
+                .toList();
     }
 
     @Transactional
-    public void removeQuestionFromSection(UUID sectionId, UUID questionId) {
+    public AdminSectionDetailDto removeQuestionFromSection(UUID sectionId, UUID questionId) {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
 
@@ -169,10 +180,11 @@ public class AdminSectionServiceImpl {
         }
         
         section.getMockTest().setUpdatedAt(java.time.Instant.now());
+        return getSectionDetail(sectionId);
     }
 
     @Transactional
-    public void reorderQuestions(UUID sectionId, java.util.List<UUID> orderedQuestionIds) {
+    public AdminSectionDetailDto reorderQuestions(UUID sectionId, java.util.List<UUID> orderedQuestionIds) {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
 
@@ -195,10 +207,11 @@ public class AdminSectionServiceImpl {
         }
 
         section.getMockTest().setUpdatedAt(java.time.Instant.now());
+        return getSectionDetail(sectionId);
     }
 
     @Transactional
-    public void updateMarksOverride(UUID sectionId, UUID questionId, java.math.BigDecimal positive, java.math.BigDecimal negative) {
+    public AdminSectionDetailDto updateMarksOverride(UUID sectionId, UUID questionId, java.math.BigDecimal positive, java.math.BigDecimal negative) {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Section not found"));
 
@@ -213,5 +226,6 @@ public class AdminSectionServiceImpl {
         
         // Triggers total_marks recalculation if you want to implement a sync, 
         // though typically total_marks is only frozen at publish time.
+        return getSectionDetail(sectionId);
     }
 }

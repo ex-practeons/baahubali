@@ -5,10 +5,9 @@ import com.example.testservice.dto.admin.QuestionCreateDto;
 import com.example.testservice.dto.admin.QuestionDetailDto;
 import com.example.testservice.dto.admin.QuestionListDto;
 import com.example.testservice.dto.admin.QuestionUpdateDto;
-import com.example.testservice.dto.admin.QuestionUpdateResponseDto;
-import com.example.testservice.dto.common.PaginatedResponseDto;
 import com.example.testservice.service.admin.impl.AdminQuestionServiceImpl;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +22,7 @@ public class AdminQuestionController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<QuestionDetailDto>> createQuestion(
-            @RequestBody QuestionCreateDto request,
+            @Valid @RequestBody QuestionCreateDto request,
             @RequestHeader("x-user-id") String adminId) {
         
         UUID questionId = adminQuestionService.createQuestion(request, adminId);
@@ -32,7 +31,7 @@ public class AdminQuestionController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<PaginatedResponseDto<QuestionListDto>>> getQuestions(
+    public ResponseEntity<ApiResponse<java.util.List<QuestionListDto>>> getQuestions(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String difficulty,
@@ -42,7 +41,7 @@ public class AdminQuestionController {
             @RequestParam(defaultValue = "20") int limit) {
         
         var response = adminQuestionService.getQuestions(search, type, difficulty, isLocked, unused, page, limit);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(ApiResponse.paginated(response.data(), response.meta()));
     }
 
     @GetMapping("/{id}")
@@ -52,18 +51,18 @@ public class AdminQuestionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<QuestionUpdateResponseDto>> updateQuestion(
+    public ResponseEntity<ApiResponse<QuestionDetailDto>> updateQuestion(
             @PathVariable UUID id,
-            @RequestBody QuestionUpdateDto request,
+            @Valid @RequestBody QuestionUpdateDto request,
             @RequestHeader("x-user-id") String adminId) { // FIX: Added adminId parameter
         
-        QuestionUpdateResponseDto response = adminQuestionService.updateQuestion(id, request, adminId);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        QuestionDetailDto response = adminQuestionService.updateQuestion(id, request, adminId);
+        return ResponseEntity.ok(ApiResponse.success(200, "Question updated successfully", response));
     }
     
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> deleteQuestion(@PathVariable UUID id) {
-        adminQuestionService.deleteQuestion(id);
-        return ResponseEntity.ok(ApiResponse.success("Question soft-deleted successfully"));
+    public ResponseEntity<ApiResponse<QuestionDetailDto>> deleteQuestion(@PathVariable UUID id) {
+        QuestionDetailDto response = adminQuestionService.deleteQuestion(id);
+        return ResponseEntity.ok(ApiResponse.success(200, "Question soft-deleted successfully", response));
     }
 }

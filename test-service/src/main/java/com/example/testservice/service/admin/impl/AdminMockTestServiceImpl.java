@@ -51,7 +51,7 @@ public class AdminMockTestServiceImpl {
     private String internalSecret;
 
     @Transactional
-    public void publishTest(UUID testId, Instant expectedUpdatedAt) {
+    public AdminMockTestDetailDto publishTest(UUID testId, Instant expectedUpdatedAt) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ValidationException("Test not found"));
 
@@ -120,6 +120,7 @@ public class AdminMockTestServiceImpl {
                 test.getPublishedAt()
         );
         kafkaPublisherService.emitTestPublished(event);
+        return getAdminMockTestDetail(testId);
     }
 
     @Transactional
@@ -183,7 +184,7 @@ public class AdminMockTestServiceImpl {
     }
 
     @Transactional
-    public void updateMockTest(UUID testId, MockTestCreateDto dto) {
+    public AdminMockTestDetailDto updateMockTest(UUID testId, MockTestCreateDto dto) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
 
@@ -203,18 +204,20 @@ public class AdminMockTestServiceImpl {
         test.setFree(dto.isFree());
 
         mockTestRepository.save(test);
+        return getAdminMockTestDetail(testId);
     }
 
     @Transactional
-    public void archiveTest(UUID testId) {
+    public AdminMockTestDetailDto archiveTest(UUID testId) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
         test.setStatus(Status.ARCHIVED);
         mockTestRepository.save(test);
+        return getAdminMockTestDetail(testId);
     }
 
     @Transactional
-    public UUID cloneTest(UUID sourceTestId, String newTitle, String adminId) {
+    public AdminMockTestDetailDto cloneTest(UUID sourceTestId, String newTitle, String adminId) {
         MockTest source = mockTestRepository.findById(sourceTestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Source test not found"));
 
@@ -257,11 +260,12 @@ public class AdminMockTestServiceImpl {
             }
         }
 
-        return mockTestRepository.save(clone).getId();
+        UUID cloneId = mockTestRepository.save(clone).getId();
+        return getAdminMockTestDetail(cloneId);
     }
 
     @Transactional
-    public void revertToDraft(UUID testId) {
+    public AdminMockTestDetailDto revertToDraft(UUID testId) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ValidationException("Test not found"));
 
@@ -272,6 +276,7 @@ public class AdminMockTestServiceImpl {
 
         test.setStatus(Status.DRAFT);
         mockTestRepository.save(test);
+        return getAdminMockTestDetail(testId);
     }
 
     @Transactional(readOnly = true)
