@@ -39,8 +39,8 @@ public class GatewayAuthenticationExceptionHandler implements WebExceptionHandle
         AuthErrorCode errorCode = exception.getErrorCode();
         String path = exchange.getRequest().getPath().value();
 
-        log.debug("Authentication rejected [{} {}] code={} reason={}",
-                exchange.getRequest().getMethod(), path, errorCode, exception.getMessage());
+        log.warn("Authentication rejected [{} {}] code={} reason={}",
+                exchange.getRequest().getMethod(), path, errorCode, rejectionReason(exception));
 
         response.setStatusCode(errorCode.getStatus());
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
@@ -51,5 +51,35 @@ public class GatewayAuthenticationExceptionHandler implements WebExceptionHandle
 
     private DataBuffer serialize(ErrorResponse body, DataBufferFactory bufferFactory) {
         return bufferFactory.wrap(objectMapper.writeValueAsBytes(body));
+    }
+
+    private String rejectionReason(GatewayAuthenticationException exception) {
+        if (exception instanceof MissingTokenException) {
+            return "TOKEN_COOKIE_MISSING";
+        }
+        if (exception instanceof ExpiredTokenException) {
+            return "TOKEN_EXPIRED";
+        }
+        if (!(exception instanceof InvalidTokenException)) {
+            return "AUTHENTICATION_REJECTED";
+        }
+
+        Throwable cause = exception.getCause();
+        if (cause == null) {
+            return "REQUIRED_JWT_CLAIM_MISSING";
+        }
+        if (cause instanceof io.jsonwebtoken.security.SignatureException) {
+            return "JWT_SIGNATURE_INVALID";
+        }
+        if (cause instanceof io.jsonwebtoken.MalformedJwtException) {
+            return "JWT_FORMAT_INVALID";
+        }
+        if (cause instanceof io.jsonwebtoken.UnsupportedJwtException) {
+            return "JWT_TYPE_UNSUPPORTED";
+        }
+        if (cause instanceof IllegalArgumentException) {
+            return "JWT_ARGUMENT_INVALID";
+        }
+        return "JWT_VALIDATION_FAILED";
     }
 }
