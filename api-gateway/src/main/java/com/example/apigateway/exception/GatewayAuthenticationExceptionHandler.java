@@ -46,7 +46,7 @@ public class GatewayAuthenticationExceptionHandler implements WebExceptionHandle
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
         return response.writeWith(
-                Mono.fromCallable(() -> serialize(ErrorResponse.of(errorCode, path), response.bufferFactory())));
+                Mono.fromCallable(() -> serialize(ErrorResponse.of(errorCode), response.bufferFactory())));
     }
 
     private DataBuffer serialize(ErrorResponse body, DataBufferFactory bufferFactory) {
