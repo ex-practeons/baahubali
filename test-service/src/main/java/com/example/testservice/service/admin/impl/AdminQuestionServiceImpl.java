@@ -207,6 +207,10 @@ public class AdminQuestionServiceImpl {
         question.setUpdatedBy(adminId);
 
         question.getTranslations().clear();
+        // Delete the orphaned rows before inserting replacements. The database
+        // has a unique constraint on (question_id, language), and without this
+        // flush Hibernate may insert the replacement before deleting the old row.
+        questionRepository.flush();
         List<QuestionTranslation> translations = dto.translations().stream().map(t -> {
             MathValidationUtil.validateBalancedMathDelimiters(t.getQuestionText());
             if (t.getOptionsJson() != null) {
