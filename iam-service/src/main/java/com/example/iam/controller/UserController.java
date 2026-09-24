@@ -27,7 +27,7 @@ public class UserController {
         User user = userRepository.findById(userId)
                 .orElseThrow(InvalidCredentialsException::new);
                 
-        UserResponse data = new UserResponse(user.getId(), user.getEmail(), user.getRole(), user.getCreatedAt());
-        return ApiResponse.success(HttpStatus.OK.value(), data);
+        UserResponse data = UserResponse.from(user);
+        return ApiResponse.success(HttpStatus.OK.value(), "User retrieved successfully", data);
     }
 }
