@@ -1,31 +1,34 @@
 package com.example.iam.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
         boolean success,
         int status,
         String message,
         T data,
+        ApiErrorResponse error,
         Map<String, Object> meta
 ) {
     private static final String API_VERSION = "0.0.1-SNAPSHOT";
 
     public static <T> ApiResponse<T> success(int status, String message, T data) {
-        return new ApiResponse<>(true, status, message, data, defaultMeta());
+        return new ApiResponse<>(true, status, message, data, null, defaultMeta());
     }
 
-    /**
-     * Kept temporarily so existing controllers can migrate to endpoint-specific
-     * messages in a separate step.
-     */
-    public static <T> ApiResponse<T> success(int status, T data) {
-        return success(status, "Request completed successfully", data);
-    }
-
-    public static <T> ApiResponse<T> error(int status, T data) {
-        return new ApiResponse<>(false, status, "Request failed", data, defaultMeta());
+    public static ApiResponse<Void> error(
+            int status, String message, String code, java.util.List<ApiErrorDetail> details) {
+        ApiErrorResponse error = new ApiErrorResponse(code, details);
+        Map<String, Object> meta = Map.of(
+                "timestamp", Instant.now().toString(),
+                "trace_id", UUID.randomUUID().toString()
+        );
+        return new ApiResponse<>(false, status, message, null, error, meta);
     }
 
     private static Map<String, Object> defaultMeta() {
