@@ -10,6 +10,10 @@ services:
       - redis_prod_data:/data
     networks:
       - backend-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
   
   baahubali-kafka:
     image: apache/kafka:latest
@@ -30,8 +34,13 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       CLUSTER_ID: 'Mk3OEYBSD3TfxwNWRZM0A'
+      KAFKA_HEAP_OPTS: "-Xmx512m -Xms512m"
     networks:
       - backend-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   api-gateway:
     build:
@@ -48,6 +57,10 @@ services:
       - backend-network
     depends_on:
       - baahubali-redis
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   iam-service:
     build:
@@ -62,6 +75,10 @@ services:
       - backend-network
     depends_on:
       - baahubali-redis
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   test-service:
     build:
@@ -79,6 +96,10 @@ services:
     depends_on:
       - baahubali-redis
       - baahubali-kafka
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
 networks:
   backend-network:
