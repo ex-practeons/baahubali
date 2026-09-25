@@ -38,6 +38,10 @@ spring:
               uri: ${TEST_SERVICE_URL:http://localhost:8080}
               predicates:
                 - Path=/api/tests/**
+            - id: attempt-service
+              uri: ${ATTEMPT_SERVICE_URL:http://localhost:8080}
+              predicates:
+                - Path=/api/attempts/**
 
 logging:
   level:

@@ -23,6 +23,7 @@
         <module>api-gateway</module>
         <module>iam-service</module>
         <module>test-service</module>
+        <module>attempt-service</module>
     </modules>
 
     <properties>
