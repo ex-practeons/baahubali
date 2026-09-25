@@ -1,5 +1,5 @@
 # ---------- Stage 1: build ----------
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /workspace
 
 # Copy the entire monorepo to bypass Maven Reactor module issues
@@ -16,7 +16,7 @@ RUN java -Djarmode=layertools -jar api-gateway/target/*.jar extract --destinatio
 
 
 # ---------- Stage 2: runtime ----------
-FROM eclipse-temurin:21-jre AS runtime
+FROM eclipse-temurin:21-jre-jammy AS runtime
 WORKDIR /application
 
 # Create a non-root user for security
