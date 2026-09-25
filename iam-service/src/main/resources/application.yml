@@ -40,3 +40,9 @@ app:
     cookie-domain: ${COOKIE_DOMAIN:}
     cookie-secure: ${COOKIE_SECURE:true}
     cookie-same-site: ${COOKIE_SAME_SITE:Strict}
+
+springdoc:
+  api-docs:
+    path: /api/auth/v3/api-docs
+  swagger-ui:
+    path: /api/auth/swagger-ui.html
