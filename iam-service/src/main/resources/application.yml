@@ -16,7 +16,7 @@ spring:
   jpa:
     hibernate:
       # Use Flyway/Liquibase for schema management in production instead of ddl-auto.
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
