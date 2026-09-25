@@ -1,24 +1,27 @@
 package com.example.apigateway.exception;
 
 import java.time.Instant;
-import org.springframework.http.HttpStatus;
+import java.util.List;
+import java.util.UUID;
 
 public record ErrorResponse(
-        Instant timestamp,
+        boolean success,
         int status,
-        String error,
-        String code,
         String message,
-        String path) {
+        Error error,
+        Meta meta) {
 
-    public static ErrorResponse of(AuthErrorCode errorCode, String path) {
-        HttpStatus status = errorCode.getStatus();
+    public static ErrorResponse of(AuthErrorCode errorCode) {
         return new ErrorResponse(
-                Instant.now(),
-                status.value(),
-                status.getReasonPhrase(),
-                errorCode.name(),
+                false,
+                errorCode.getStatus().value(),
                 errorCode.getClientMessage(),
-                path);
+                new Error(errorCode.name(), List.of()),
+                new Meta(Instant.now().toString(), "err-" + UUID.randomUUID()));
     }
+
+    public record Error(String code, List<?> details) {}
+
+    // This component name preserves the API contract's snake_case JSON key.
+    public record Meta(String timestamp, String trace_id) {}
 }

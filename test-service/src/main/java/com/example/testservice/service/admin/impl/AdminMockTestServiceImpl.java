@@ -2,6 +2,7 @@ package com.example.testservice.service.admin.impl;
 
 import com.example.testservice.client.AttemptServiceClient;
 import com.example.testservice.dto.admin.MockTestCreateDto;
+import com.example.testservice.dto.admin.AdminMockTestDetailDto;
 import com.example.testservice.dto.event.TestPublishedEvent;
 import com.example.testservice.dto.internal.QuestionBlueprintDto;
 import com.example.testservice.dto.internal.QuestionTranslationBlueprintDto;
@@ -50,7 +51,7 @@ public class AdminMockTestServiceImpl {
     private String internalSecret;
 
     @Transactional
-    public void publishTest(UUID testId, Instant expectedUpdatedAt) {
+    public AdminMockTestDetailDto publishTest(UUID testId, Instant expectedUpdatedAt) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ValidationException("Test not found"));
 
@@ -119,6 +120,7 @@ public class AdminMockTestServiceImpl {
                 test.getPublishedAt()
         );
         kafkaPublisherService.emitTestPublished(event);
+        return getAdminMockTestDetail(testId);
     }
 
     @Transactional
@@ -148,8 +150,41 @@ public class AdminMockTestServiceImpl {
         return mockTestRepository.save(test).getId();
     }
 
+    @Transactional(readOnly = true)
+    public AdminMockTestDetailDto getAdminMockTestDetail(UUID testId) {
+        MockTest test = mockTestRepository.findById(testId)
+                .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
+
+        return new AdminMockTestDetailDto(
+                test.getId(),
+                test.getSeries().getId(),
+                test.getTitle(),
+                test.getDurationMinutes(),
+                test.getStatus(),
+                test.getTotalMarks(),
+                test.isSectionOrderStrict(),
+                test.isShuffleSections(),
+                test.isNegativeMarkingEnabled(),
+                test.getInstructions(),
+                test.isFree(),
+                test.getPublishedAt(),
+                test.getCreatedAt(),
+                test.getUpdatedAt(),
+                test.getSections().stream()
+                        .map(section -> new AdminMockTestDetailDto.SectionSummaryDto(
+                                section.getId(),
+                                section.getTitle(),
+                                section.getSequenceOrder(),
+                                section.getDurationMinutes(),
+                                section.isShuffleQuestions(),
+                                section.getSectionQuestions().size()
+                        ))
+                        .toList()
+        );
+    }
+
     @Transactional
-    public void updateMockTest(UUID testId, MockTestCreateDto dto) {
+    public AdminMockTestDetailDto updateMockTest(UUID testId, MockTestCreateDto dto) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
 
@@ -169,18 +204,20 @@ public class AdminMockTestServiceImpl {
         test.setFree(dto.isFree());
 
         mockTestRepository.save(test);
+        return getAdminMockTestDetail(testId);
     }
 
     @Transactional
-    public void archiveTest(UUID testId) {
+    public AdminMockTestDetailDto archiveTest(UUID testId) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
         test.setStatus(Status.ARCHIVED);
         mockTestRepository.save(test);
+        return getAdminMockTestDetail(testId);
     }
 
     @Transactional
-    public UUID cloneTest(UUID sourceTestId, String newTitle, String adminId) {
+    public AdminMockTestDetailDto cloneTest(UUID sourceTestId, String newTitle, String adminId) {
         MockTest source = mockTestRepository.findById(sourceTestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Source test not found"));
 
@@ -223,11 +260,12 @@ public class AdminMockTestServiceImpl {
             }
         }
 
-        return mockTestRepository.save(clone).getId();
+        UUID cloneId = mockTestRepository.save(clone).getId();
+        return getAdminMockTestDetail(cloneId);
     }
 
     @Transactional
-    public void revertToDraft(UUID testId) {
+    public AdminMockTestDetailDto revertToDraft(UUID testId) {
         MockTest test = mockTestRepository.findById(testId)
                 .orElseThrow(() -> new ValidationException("Test not found"));
 
@@ -238,6 +276,7 @@ public class AdminMockTestServiceImpl {
 
         test.setStatus(Status.DRAFT);
         mockTestRepository.save(test);
+        return getAdminMockTestDetail(testId);
     }
 
     @Transactional(readOnly = true)

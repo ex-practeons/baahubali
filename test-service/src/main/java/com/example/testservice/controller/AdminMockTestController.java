@@ -1,6 +1,7 @@
 package com.example.testservice.controller;
 
 import com.example.testservice.dto.ApiResponse;
+import com.example.testservice.dto.admin.AdminMockTestDetailDto;
 import com.example.testservice.service.admin.impl.AdminMockTestServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,36 +20,37 @@ public class AdminMockTestController {
     private final AdminMockTestServiceImpl adminMockTestService;
 
     @PostMapping("/{id}/publish")
-    public ResponseEntity<ApiResponse<String>> publishTest(
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> publishTest(
             @PathVariable UUID id,
             @RequestHeader(value = "If-Match", required = true) Instant expectedUpdatedAt) {
         
-        adminMockTestService.publishTest(id, expectedUpdatedAt);
-        return ResponseEntity.ok(ApiResponse.success("Test published successfully"));
+        AdminMockTestDetailDto response = adminMockTestService.publishTest(id, expectedUpdatedAt);
+        return ResponseEntity.ok(ApiResponse.success(200, "Test published successfully", response));
     }
 
     @PostMapping("/series/{seriesId}/mock-tests")
-    public ResponseEntity<ApiResponse<UUID>> createMockTest(
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> createMockTest(
             @PathVariable UUID seriesId,
             @RequestBody com.example.testservice.dto.admin.MockTestCreateDto request,
             @RequestHeader("x-user-id") String adminId) {
         
         UUID testId = adminMockTestService.createMockTest(seriesId, request, adminId);
-        return ResponseEntity.status(201).body(ApiResponse.success(testId));
+        AdminMockTestDetailDto response = adminMockTestService.getAdminMockTestDetail(testId);
+        return ResponseEntity.status(201).body(ApiResponse.success(201, response));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<String>> updateMockTest(
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> updateMockTest(
             @PathVariable UUID id,
             @RequestBody com.example.testservice.dto.admin.MockTestCreateDto request) {
         
-        adminMockTestService.updateMockTest(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Test updated successfully"));
+        AdminMockTestDetailDto response = adminMockTestService.updateMockTest(id, request);
+        return ResponseEntity.ok(ApiResponse.success(200, "Test updated successfully", response));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<com.example.testservice.dto.publiccatalog.PublicMockTestStructureDto>> getMockTestSummary(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(adminMockTestService.getMockTestSummary(id)));
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> getMockTestSummary(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.success(adminMockTestService.getAdminMockTestDetail(id)));
     }
 
     @GetMapping("/{id}/answer-key")
@@ -58,25 +60,25 @@ public class AdminMockTestController {
     }
 
     @PostMapping("/{id}/archive")
-    public ResponseEntity<ApiResponse<String>> archiveTest(@PathVariable UUID id) {
-        adminMockTestService.archiveTest(id);
-        return ResponseEntity.ok(ApiResponse.success("Test archived successfully"));
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> archiveTest(@PathVariable UUID id) {
+        AdminMockTestDetailDto response = adminMockTestService.archiveTest(id);
+        return ResponseEntity.ok(ApiResponse.success(200, "Test archived successfully", response));
     }
 
     @PostMapping("/{id}/clone")
-    public ResponseEntity<ApiResponse<UUID>> cloneTest(
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> cloneTest(
             @PathVariable UUID id,
             @RequestBody java.util.Map<String, String> body,
             @RequestHeader("x-user-id") String adminId) {
         
         String newTitle = body.get("newTitle");
-        UUID clonedId = adminMockTestService.cloneTest(id, newTitle, adminId);
-        return ResponseEntity.ok(ApiResponse.success(clonedId));
+        AdminMockTestDetailDto response = adminMockTestService.cloneTest(id, newTitle, adminId);
+        return ResponseEntity.ok(ApiResponse.success(200, "Test cloned successfully", response));
     }
 
     @PatchMapping("/{id}/revert-to-draft")
-    public ResponseEntity<ApiResponse<String>> revertToDraft(@PathVariable UUID id) {
-        adminMockTestService.revertToDraft(id);
-        return ResponseEntity.ok(ApiResponse.success("Test reverted to DRAFT"));
+    public ResponseEntity<ApiResponse<AdminMockTestDetailDto>> revertToDraft(@PathVariable UUID id) {
+        AdminMockTestDetailDto response = adminMockTestService.revertToDraft(id);
+        return ResponseEntity.ok(ApiResponse.success(200, "Test reverted to DRAFT", response));
     }
 }

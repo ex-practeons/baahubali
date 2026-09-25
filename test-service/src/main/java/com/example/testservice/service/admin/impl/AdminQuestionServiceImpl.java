@@ -118,7 +118,7 @@ public class AdminQuestionServiceImpl {
         return new QuestionDetailDto(
                 q.getId(), q.getQuestionType(), translationDtos,
                 q.getCorrectAnswerJson(), q.getPositiveMarks(), q.getNegativeMarks(),
-                q.getExplanation(), q.getDifficulty(), q.isLocked(), q.getCreatedAt(), q.getCreatedBy()
+                q.getExplanation(), q.getDifficulty(), q.isLocked(), q.getCreatedAt(), q.getCreatedBy(), null
         );
     }
 
@@ -181,7 +181,7 @@ public class AdminQuestionServiceImpl {
     }
 
     @Transactional
-    public QuestionUpdateResponseDto updateQuestion(UUID id, QuestionUpdateDto dto, String adminId) {
+    public QuestionDetailDto updateQuestion(UUID id, QuestionUpdateDto dto, String adminId) {
         Question question = questionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
 
@@ -207,6 +207,10 @@ public class AdminQuestionServiceImpl {
         question.setUpdatedBy(adminId);
 
         question.getTranslations().clear();
+        // Delete the orphaned rows before inserting replacements. The database
+        // has a unique constraint on (question_id, language), and without this
+        // flush Hibernate may insert the replacement before deleting the old row.
+        questionRepository.flush();
         List<QuestionTranslation> translations = dto.translations().stream().map(t -> {
             MathValidationUtil.validateBalancedMathDelimiters(t.getQuestionText());
             if (t.getOptionsJson() != null) {
@@ -227,11 +231,15 @@ public class AdminQuestionServiceImpl {
         questionRepository.save(question);
 
         String warning = question.isLocked() ? "This question is used in one or more published tests. Changes apply to future attempts only, per current attempt snapshots already taken." : null;
-        return new QuestionUpdateResponseDto(question.getId(), warning);
+        QuestionDetailDto updatedQuestion = getQuestionById(question.getId());
+        return new QuestionDetailDto(updatedQuestion.id(), updatedQuestion.questionType(), updatedQuestion.translations(),
+                updatedQuestion.correctAnswerJson(), updatedQuestion.positiveMarks(), updatedQuestion.negativeMarks(),
+                updatedQuestion.explanation(), updatedQuestion.difficulty(), updatedQuestion.isLocked(),
+                updatedQuestion.createdAt(), updatedQuestion.createdBy(), warning);
     }
 
     @Transactional
-    public void deleteQuestion(UUID id) {
+    public QuestionDetailDto deleteQuestion(UUID id) {
         Question question = questionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
 
@@ -241,6 +249,7 @@ public class AdminQuestionServiceImpl {
 
         question.setDeletedAt(java.time.Instant.now());
         questionRepository.save(question);
+        return getQuestionById(id);
     }
 
     private Map<String, Object> extractOptionsForValidation(List<QuestionTranslationDto> translations) {

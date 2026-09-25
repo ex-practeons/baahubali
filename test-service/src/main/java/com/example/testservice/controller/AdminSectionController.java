@@ -2,6 +2,7 @@ package com.example.testservice.controller;
 
 import com.example.testservice.dto.ApiResponse;
 import com.example.testservice.dto.admin.BulkAttachQuestionsDto;
+import com.example.testservice.dto.admin.AdminSectionDetailDto;
 import com.example.testservice.dto.admin.SectionCreateDto;
 import com.example.testservice.service.admin.impl.AdminSectionServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -21,54 +22,57 @@ public class AdminSectionController {
     private final AdminSectionServiceImpl adminSectionService;
 
     @PostMapping("/mock-tests/{testId}/sections")
-    public ResponseEntity<ApiResponse<UUID>> createSection(
+    public ResponseEntity<ApiResponse<AdminSectionDetailDto>> createSection(
             @PathVariable UUID testId,
             @RequestBody SectionCreateDto request,
             @RequestHeader("x-user-id") String adminId) {
         UUID sectionId = adminSectionService.createSection(testId, request, adminId);
-        return ResponseEntity.status(201).body(ApiResponse.success(sectionId));
+        AdminSectionDetailDto response = adminSectionService.getSectionDetail(sectionId);
+        return ResponseEntity.status(201).body(ApiResponse.success(201, response));
     }
 
     @PutMapping("/mock-tests/{testId}/sections/reorder")
-    public ResponseEntity<ApiResponse<String>> reorderSections(
+    public ResponseEntity<ApiResponse<List<AdminSectionDetailDto>>> reorderSections(
             @PathVariable UUID testId,
             @RequestBody Map<String, List<UUID>> request) {
-        adminSectionService.reorderSections(testId, request.get("orderedSectionIds"));
-        return ResponseEntity.ok(ApiResponse.success("Sections reordered successfully"));
+        List<AdminSectionDetailDto> response = adminSectionService.reorderSections(testId, request.get("orderedSectionIds"));
+        return ResponseEntity.ok(ApiResponse.success(200, "Sections reordered successfully", response));
     }
 
     // --- Question Mapping Operations ---
 
     @PostMapping("/sections/{id}/questions")
-    public ResponseEntity<ApiResponse<String>> attachQuestionsToSection(
+    public ResponseEntity<ApiResponse<AdminSectionDetailDto>> attachQuestionsToSection(
             @PathVariable UUID id,
-            @RequestBody BulkAttachQuestionsDto request) {
-        adminSectionService.attachQuestions(id, request);
-        return ResponseEntity.ok(ApiResponse.success("Questions attached successfully"));
+            @RequestBody BulkAttachQuestionsDto request,
+            @RequestHeader("x-user-id") String adminId) {
+        AdminSectionDetailDto response = adminSectionService.attachQuestions(id, request, adminId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("/sections/{sectionId}/questions/{questionId}")
-    public ResponseEntity<ApiResponse<String>> removeQuestionFromSection(
+    public ResponseEntity<ApiResponse<AdminSectionDetailDto>> removeQuestionFromSection(
             @PathVariable UUID sectionId,
             @PathVariable UUID questionId) {
-        adminSectionService.removeQuestionFromSection(sectionId, questionId);
-        return ResponseEntity.ok(ApiResponse.success("Question removed from section"));
+        AdminSectionDetailDto response = adminSectionService.removeQuestionFromSection(sectionId, questionId);
+        return ResponseEntity.ok(ApiResponse.success(200, "Question removed from section", response));
     }
 
     @PutMapping("/sections/{sectionId}/questions/reorder")
-    public ResponseEntity<ApiResponse<String>> reorderQuestionsInSection(
+    public ResponseEntity<ApiResponse<AdminSectionDetailDto>> reorderQuestionsInSection(
             @PathVariable UUID sectionId,
             @RequestBody Map<String, List<UUID>> request) {
-        adminSectionService.reorderQuestions(sectionId, request.get("orderedQuestionIds"));
-        return ResponseEntity.ok(ApiResponse.success("Questions reordered successfully"));
+        AdminSectionDetailDto response = adminSectionService.reorderQuestions(sectionId, request.get("orderedQuestionIds"));
+        return ResponseEntity.ok(ApiResponse.success(200, "Questions reordered successfully", response));
     }
 
     @PatchMapping("/sections/{sectionId}/questions/{questionId}")
-    public ResponseEntity<ApiResponse<String>> updateQuestionMarks(
+    public ResponseEntity<ApiResponse<AdminSectionDetailDto>> updateQuestionMarks(
             @PathVariable UUID sectionId,
             @PathVariable UUID questionId,
             @RequestBody Map<String, BigDecimal> request) {
-        adminSectionService.updateMarksOverride(sectionId, questionId, request.get("positiveMarks"), request.get("negativeMarks"));
-        return ResponseEntity.ok(ApiResponse.success("Question marks updated for this section"));
+        AdminSectionDetailDto response = adminSectionService.updateMarksOverride(
+                sectionId, questionId, request.get("positiveMarks"), request.get("negativeMarks"));
+        return ResponseEntity.ok(ApiResponse.success(200, "Question marks updated for this section", response));
     }
 }
