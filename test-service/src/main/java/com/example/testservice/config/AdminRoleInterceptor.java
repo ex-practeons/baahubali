@@ -20,8 +20,6 @@ public class AdminRoleInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String role = request.getHeader("X-User-Role");
-
-        System.out.println ("ROLE -------------->" + role);
         
         if (role == null || (!role.equals("ADMIN"))) {
             response.setStatus(HttpStatus.FORBIDDEN.value());

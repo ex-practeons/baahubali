@@ -2,6 +2,7 @@ package com.example.iam.config;
 
 import com.example.iam.dto.ApiResponse;
 import com.example.iam.security.GatewayHeaderAuthenticationFilter;
+import com.example.platformcommon.openapi.SwaggerPaths;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,7 +38,16 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                        .requestMatchers(SwaggerPaths.PUBLIC).permitAll()
+                        .requestMatchers(
+                                "/api/auth/v3/api-docs",
+                                "/api/auth/v3/api-docs/**",
+                                "/api/auth/swagger-ui.html",
+                                "/api/auth/swagger-ui/**",
+                                "/api/auth/webjars/**"
+                        ).permitAll()
+                        .requestMatchers(SwaggerPaths.PUBLIC).permitAll()
+                        .requestMatchers("/api/auth/v3/api-docs").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions
@@ -55,7 +65,7 @@ public class SecurityConfig {
                         ))
                 )
                 .addFilterBefore(gatewayHeaderAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .build(); 
+                .build();
     }
 
     private void writeSecurityError(

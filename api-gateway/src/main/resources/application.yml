@@ -49,19 +49,22 @@ springdoc:
     urls:
       - name: IAM Service
         url: /api/auth/v3/api-docs
-      - name: Exam Engine
-        url: /api/exams/v3/api-docs
+      - name: Test Service
+        url: /api/tests/v3/api-docs
 
 gateway:
   security:
     public-paths:
       - /api/auth/login
       - /api/auth/register
+      - /api/*/swagger-ui.html
+      - /api/*/swagger-ui/**
+      - /api/*/v3/api-docs
+      - /api/*/v3/api-docs/**
+      - /api/*/webjars/**
       - /swagger-ui.html
       - /swagger-ui/**
       - /v3/api-docs/**
-      - /api/auth/v3/api-docs
-      - /api/exams/v3/api-docs
       - /webjars/**
     jwt:
       secret: ${JWT_SECRET:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI}

@@ -89,6 +89,25 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!--
+            Swagger / OpenAPI. Version is inherited from the root POM's
+            dependencyManagement — do not pin a version here.
+        -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+
+        <!--
+            Auto-configures the OpenAPI bean (title, description, gateway
+            header security schemes) and provides SwaggerPaths, used below
+            in SecurityConfig to permit the docs endpoints.
+        -->
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
