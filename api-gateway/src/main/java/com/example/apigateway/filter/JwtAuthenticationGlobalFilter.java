@@ -6,6 +6,7 @@ import org.springframework.core.Ordered;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
+import com.example.apigateway.config.RateLimiterConfig;
 import com.example.apigateway.exception.MissingTokenException;
 import com.example.apigateway.security.IdentityHeaderPropagator;
 import com.example.apigateway.security.PublicRouteMatcher;
@@ -47,6 +48,7 @@ public class JwtAuthenticationGlobalFilter implements GlobalFilter, Ordered {
         }
 
         return tokenValidator.validate(token)
+                .doOnNext(user -> exchange.getAttributes().put(RateLimiterConfig.RATE_LIMIT_SUBJECT_ATTR, user.userId()))
                 .map(user -> identityHeaderPropagator.propagate(request, user))
                 .flatMap(authenticatedRequest -> forward(exchange, chain, authenticatedRequest));
     }

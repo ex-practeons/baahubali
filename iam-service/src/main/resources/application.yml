@@ -47,6 +47,6 @@ app:
 
 springdoc:
   api-docs:
-    path: /auth-api/v3/api-docs
+    path: /v3/api-docs
   swagger-ui:
-    path: /auth-api/swagger-ui.html
+    path: /swagger-ui.html

@@ -384,36 +384,6 @@ public class AttemptService {
         }
     }
 
-    public AttemptHistoryResponse getMockedHistory(String userId) {
-        AttemptHistorySummary mocked = AttemptHistorySummary.builder()
-                .attemptId(UUID.randomUUID().toString())
-                .testId("test-456")
-                .status(AttemptStatus.SUBMITTED.name())
-                .finalScore(82.5)
-                .startedAt(Instant.now().minusSeconds(86_400))
-                .build();
-
-        return AttemptHistoryResponse.builder()
-                .attempts(List.of(mocked))
-                .build();
-    }
-
-    public AttemptReviewResponse getMockedReview(String attemptId) {
-        QuestionReviewDto mockedQuestion = QuestionReviewDto.builder()
-                .questionId("q1")
-                .questionText("Mocked question text pending test-service integration")
-                .selectedOption("B")
-                .correctOption("A")
-                .explanation("Mocked explanation pending test-service integration")
-                .build();
-
-        return AttemptReviewResponse.builder()
-                .attemptId(attemptId)
-                .finalScore(82.5)
-                .questions(List.of(mockedQuestion))
-                .build();
-    }
-
     private SubmitAttemptResponse toSubmitResponse(Attempt attempt) {
         return SubmitAttemptResponse.builder()
                 .attemptId(attempt.getId())

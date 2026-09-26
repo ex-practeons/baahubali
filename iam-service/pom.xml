@@ -3,14 +3,12 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>com.example</groupId>
         <artifactId>testing-platform</artifactId>
         <version>0.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-
     <groupId>com.example</groupId>
     <artifactId>iam-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -52,10 +50,14 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
 
-        <!-- Spring Security -->
+        <!-- Spring Security & OAuth2 Client -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
 
         <!-- Spring Data Redis -->
@@ -89,20 +91,13 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!--
-            Swagger / OpenAPI. Version is inherited from the root POM's
-            dependencyManagement — do not pin a version here.
-        -->
+        <!-- Swagger / OpenAPI -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
 
-        <!--
-            Auto-configures the OpenAPI bean (title, description, gateway
-            header security schemes) and provides SwaggerPaths, used below
-            in SecurityConfig to permit the docs endpoints.
-        -->
+        <!-- Common module -->
         <dependency>
             <groupId>com.example</groupId>
             <artifactId>common</artifactId>
@@ -144,5 +139,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
