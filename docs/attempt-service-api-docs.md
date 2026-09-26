@@ -4,11 +4,11 @@ The **Attempt Service** handles the test-taking sessions.
 
 ### Start Attempt
 Starts a new attempt for a mock test.
-**Endpoint:** `POST /api/attempts`
+**Endpoint:** `POST /attempts-api`
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:8080/api/attempts \
+curl -X POST http://localhost:8080/attempts-api \
   -H "Content-Type: application/json" \
   -H "Cookie: ACCESS_TOKEN=<token>" \
   -d '{
@@ -29,32 +29,32 @@ curl -X POST http://localhost:8080/api/attempts \
 
 ### Submit Attempt
 Finalizes and submits an ongoing attempt.
-**Endpoint:** `POST /api/attempts/{id}/submit`
+**Endpoint:** `POST /attempts-api/{id}/submit`
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:8080/api/attempts/a5f9c5d-8b4d-4b8c-8f9f-7b8c8d8f0001/submit \
+curl -X POST http://localhost:8080/attempts-api/a5f9c5d-8b4d-4b8c-8f9f-7b8c8d8f0001/submit \
   -H "Cookie: ACCESS_TOKEN=<token>"
 ```
 
 ### Stream Attempt (SSE)
 Subscribes to Server-Sent Events (SSE) for real-time updates regarding the test attempt (like time remaining, background flush status, etc).
-**Endpoint:** `GET /api/attempts/{id}/stream`
+**Endpoint:** `GET /attempts-api/{id}/stream`
 
 **cURL Example:**
 ```bash
-curl -X GET http://localhost:8080/api/attempts/a5f9c5d-8b4d-4b8c-8f9f-7b8c8d8f0001/stream \
+curl -X GET http://localhost:8080/attempts-api/a5f9c5d-8b4d-4b8c-8f9f-7b8c8d8f0001/stream \
   -H "Accept: text/event-stream" \
   -H "Cookie: ACCESS_TOKEN=<token>"
 ```
 
 ### Patch Attempt
 Saves answers dynamically while the attempt is ongoing.
-**Endpoint:** `PATCH /api/attempts/{id}`
+**Endpoint:** `PATCH /attempts-api/{id}`
 
 **cURL Example:**
 ```bash
-curl -X PATCH http://localhost:8080/api/attempts/a5f9c5d-8b4d-4b8c-8f9f-7b8c8d8f0001 \
+curl -X PATCH http://localhost:8080/attempts-api/a5f9c5d-8b4d-4b8c-8f9f-7b8c8d8f0001 \
   -H "Content-Type: application/json" \
   -H "Cookie: ACCESS_TOKEN=<token>" \
   -d '{

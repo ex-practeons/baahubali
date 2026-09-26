@@ -1,5 +1,6 @@
 package com.example.attemptservice.service;
 
+import com.example.attemptservice.client.TestServiceFeignClient;
 import com.example.attemptservice.dto.AttemptHistoryResponse;
 import com.example.attemptservice.dto.AttemptHistorySummary;
 import com.example.attemptservice.dto.AttemptReviewResponse;
@@ -10,7 +11,9 @@ import com.example.attemptservice.dto.QuestionReviewDto;
 import com.example.attemptservice.dto.StartAttemptRequest;
 import com.example.attemptservice.dto.StartAttemptResponse;
 import com.example.attemptservice.dto.SubmitAttemptResponse;
+import com.example.attemptservice.dto.internal.InternalTestBlueprintDto;
 import com.example.attemptservice.entity.Attempt;
+import com.example.attemptservice.entity.AttemptAnswer;
 import com.example.attemptservice.entity.AttemptStatus;
 import com.example.attemptservice.entity.AttemptAnswer;
 import com.example.attemptservice.event.AttemptSubmittedEvent;
@@ -34,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -42,6 +46,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -51,6 +56,7 @@ public class AttemptService {
     private static final String REDIS_KEY_PREFIX = "attempt:";
 
     private final AttemptRepository attemptRepository;
+    private final AttemptAnswerRepository attemptAnswerRepository;
     private final AttemptRedisRepository attemptRedisRepository;
     private final AttemptFlushWorker attemptFlushWorker;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -63,20 +69,25 @@ public class AttemptService {
         thread.setDaemon(true);
         return thread;
     });
+    private final TestServiceFeignClient testServiceFeignClient;
 
     public AttemptService(AttemptRepository attemptRepository,
+                          AttemptAnswerRepository attemptAnswerRepository,
                           AttemptRedisRepository attemptRedisRepository,
                           @Lazy AttemptFlushWorker attemptFlushWorker,
                           KafkaTemplate<String, Object> kafkaTemplate,
                           AttemptAnswerRepository attemptAnswerRepository,
                           StringRedisTemplate redisTemplate) {
+                          TestServiceFeignClient testServiceFeignClient) {
         this.attemptRepository = attemptRepository;
+        this.attemptAnswerRepository = attemptAnswerRepository;
         this.attemptRedisRepository = attemptRedisRepository;
         this.attemptFlushWorker = attemptFlushWorker;
         this.kafkaTemplate = kafkaTemplate;
         this.attemptAnswerRepository = attemptAnswerRepository;
         this.redisTemplate = redisTemplate;
         heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeats, 20, 20, TimeUnit.SECONDS);
+        this.testServiceFeignClient = testServiceFeignClient;
     }
 
     @Transactional
@@ -115,10 +126,13 @@ public class AttemptService {
                     }
                 });
 
+        // Hydrate live test data securely from test-service
+        InternalTestBlueprintDto testBlueprint = testServiceFeignClient.getTestBlueprint(saved.getTestId());
+
         return StartAttemptResponse.builder()
                 .attemptId(saved.getId())
                 .deadline(deadline)
-                .testPayload(mockedTestPayload(saved.getTestId()))
+                .testPayload(testBlueprint)
                 .build();
     }
 
@@ -157,6 +171,82 @@ public class AttemptService {
         kafkaTemplate.send("attempt-submitted-events", attemptId, new AttemptSubmittedEvent(attemptId));
     }
 
+    @Transactional(readOnly = true)
+    public AttemptHistoryResponse getHistory(String userId) {
+        List<Attempt> rawAttempts = attemptRepository.findByUserIdOrderByStartedAtDesc(userId);
+        
+        List<AttemptHistorySummary> historySummaries = rawAttempts.stream()
+                .map(attempt -> AttemptHistorySummary.builder()
+                        .attemptId(attempt.getId())
+                        .testId(attempt.getTestId())
+                        .status(attempt.getStatus().name())
+                        .finalScore(attempt.getFinalScore())
+                        .startedAt(attempt.getStartedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        return AttemptHistoryResponse.builder()
+                .attempts(historySummaries)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AttemptReviewResponse getReview(String attemptId) {
+        Attempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new AttemptNotFoundException(attemptId));
+
+        List<AttemptAnswer> studentAnswers = attemptAnswerRepository.findByAttemptId(attemptId);
+        Map<String, String> answerMap = studentAnswers.stream()
+                .collect(Collectors.toMap(AttemptAnswer::getQuestionId, AttemptAnswer::getSelectedOption));
+
+        // Fetch securely from test service
+        InternalTestBlueprintDto blueprint = testServiceFeignClient.getTestBlueprint(attempt.getTestId());
+
+        List<QuestionReviewDto> reviewDtos = new ArrayList<>();
+        
+        if (blueprint.getSections() != null) {
+            for (InternalTestBlueprintDto.InternalSectionDto section : blueprint.getSections()) {
+                if (section.getQuestions() != null) {
+                    for (InternalTestBlueprintDto.InternalQuestionDto q : section.getQuestions()) {
+                        
+                        // Handle case where student left it completely blank
+                        String selected = answerMap.getOrDefault(q.getId(), null);
+                        
+                        String correctOpt = null;
+                        if (q.getCorrectAnswerJson() != null) {
+                            if ("MCQ".equalsIgnoreCase(q.getQuestionType())) {
+                                correctOpt = (String) q.getCorrectAnswerJson().get("key");
+                            } else if ("MULTI_CORRECT".equalsIgnoreCase(q.getQuestionType())) {
+                                Object keys = q.getCorrectAnswerJson().get("keys");
+                                correctOpt = keys != null ? keys.toString() : null;
+                            } else if ("NUMERICAL".equalsIgnoreCase(q.getQuestionType())) {
+                                Object val = q.getCorrectAnswerJson().get("value");
+                                correctOpt = val != null ? val.toString() : null;
+                            }
+                        }
+
+                        String qText = (q.getTranslations() != null && !q.getTranslations().isEmpty()) 
+                                ? q.getTranslations().get(0).getQuestionText() 
+                                : "Question text unavailable";
+
+                        reviewDtos.add(QuestionReviewDto.builder()
+                                .questionId(q.getId())
+                                .questionText(qText)
+                                .selectedOption(selected)
+                                .correctOption(correctOpt)
+                                .explanation(q.getExplanation())
+                                .build());
+                    }
+                }
+            }
+        }
+
+        return AttemptReviewResponse.builder()
+                .attemptId(attempt.getId())
+                .finalScore(attempt.getFinalScore())
+                .questions(reviewDtos)
+                .build();
+    }
 
     public AttemptStateResponse getAttemptState(String attemptId) {
         AttemptRedisHash hash = attemptRedisRepository.findById(attemptId).orElseGet(() -> rehydrate(attemptId));
@@ -220,6 +310,8 @@ public class AttemptService {
         emitter.onCompletion(remove);
         emitter.onTimeout(remove);
         emitter.onError(error -> remove.run());
+    public SseEmitter getMockedSseEmitter(String attemptId) {
+        SseEmitter emitter = new SseEmitter(0L); 
         try {
             emitter.send(SseEmitter.event().name("connected").data(Map.of("attemptId", attemptId)));
         } catch (Exception ex) {
@@ -320,13 +412,5 @@ public class AttemptService {
                 .status(attempt.getStatus().name())
                 .finalScore(attempt.getFinalScore())
                 .build();
-    }
-
-    private Object mockedTestPayload(String testId) {
-        return Map.of(
-                "testId", testId,
-                "title", "Mocked Test Blueprint",
-                "note", "Real blueprint fetch from test-service not wired up yet"
-        );
     }
 }

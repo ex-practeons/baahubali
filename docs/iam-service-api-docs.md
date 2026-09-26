@@ -4,11 +4,11 @@ The **IAM Service** handles authentication and authorization.
 
 ### Register User
 Registers a new user account.
-**Endpoint:** `POST /api/auth/register`
+**Endpoint:** `POST /auth-api/register`
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/auth-api/register \
   -H "Content-Type: application/json" \
   -d '{
     "firstName": "John",
@@ -40,11 +40,11 @@ curl -X POST http://localhost:8080/api/auth/register \
 
 ### Login
 Authenticates an existing user and returns an auth cookie.
-**Endpoint:** `POST /api/auth/login`
+**Endpoint:** `POST /auth-api/login`
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/auth-api/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john.doe@example.com",
@@ -73,11 +73,11 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 ### Logout
 Logs out the user by clearing the auth cookie.
-**Endpoint:** `POST /api/auth/logout`
+**Endpoint:** `POST /auth-api/logout`
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/logout \
+curl -X POST http://localhost:8080/auth-api/logout \
   -H "x-user-id: u4f9c5d-8b4d-4b8c-8f9f-7b8c8d8f0001"
 ```
 

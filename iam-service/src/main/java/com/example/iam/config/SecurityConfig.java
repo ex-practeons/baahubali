@@ -40,15 +40,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(SwaggerPaths.PUBLIC).permitAll()
                         .requestMatchers(
-                                "/api/auth/v3/api-docs",
-                                "/api/auth/v3/api-docs/**",
-                                "/api/auth/swagger-ui.html",
-                                "/api/auth/swagger-ui/**",
-                                "/api/auth/webjars/**"
+                                "/v3/api-docs",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/webjars/**"
                         ).permitAll()
-                        .requestMatchers("/api/auth/register", "/api/auth/login").permitAll()
+                        .requestMatchers("/register", "/login").permitAll()
                         .requestMatchers(SwaggerPaths.PUBLIC).permitAll()
-                        .requestMatchers("/api/auth/v3/api-docs").permitAll()
+                        .requestMatchers("/v3/api-docs").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptions -> exceptions
