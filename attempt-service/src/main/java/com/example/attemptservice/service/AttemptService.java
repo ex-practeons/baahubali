@@ -12,10 +12,10 @@ import com.example.attemptservice.dto.StartAttemptRequest;
 import com.example.attemptservice.dto.StartAttemptResponse;
 import com.example.attemptservice.dto.SubmitAttemptResponse;
 import com.example.attemptservice.dto.internal.InternalTestBlueprintDto;
+import com.example.attemptservice.dto.internal.TestServiceResponse;
 import com.example.attemptservice.entity.Attempt;
 import com.example.attemptservice.entity.AttemptAnswer;
 import com.example.attemptservice.entity.AttemptStatus;
-import com.example.attemptservice.entity.AttemptAnswer;
 import com.example.attemptservice.event.AttemptSubmittedEvent;
 import com.example.attemptservice.exception.AttemptNotFoundException;
 import com.example.attemptservice.redis.AttemptRedisHash;
@@ -60,7 +60,6 @@ public class AttemptService {
     private final AttemptRedisRepository attemptRedisRepository;
     private final AttemptFlushWorker attemptFlushWorker;
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final AttemptAnswerRepository attemptAnswerRepository;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
@@ -76,15 +75,13 @@ public class AttemptService {
                           AttemptRedisRepository attemptRedisRepository,
                           @Lazy AttemptFlushWorker attemptFlushWorker,
                           KafkaTemplate<String, Object> kafkaTemplate,
-                          AttemptAnswerRepository attemptAnswerRepository,
-                          StringRedisTemplate redisTemplate) {
+                          StringRedisTemplate redisTemplate,
                           TestServiceFeignClient testServiceFeignClient) {
         this.attemptRepository = attemptRepository;
         this.attemptAnswerRepository = attemptAnswerRepository;
         this.attemptRedisRepository = attemptRedisRepository;
         this.attemptFlushWorker = attemptFlushWorker;
         this.kafkaTemplate = kafkaTemplate;
-        this.attemptAnswerRepository = attemptAnswerRepository;
         this.redisTemplate = redisTemplate;
         heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeats, 20, 20, TimeUnit.SECONDS);
         this.testServiceFeignClient = testServiceFeignClient;
@@ -127,7 +124,13 @@ public class AttemptService {
                 });
 
         // Hydrate live test data securely from test-service
-        InternalTestBlueprintDto testBlueprint = testServiceFeignClient.getTestBlueprint(saved.getTestId());
+        TestServiceResponse<InternalTestBlueprintDto> response =
+                testServiceFeignClient.getTestBlueprint(saved.getTestId());
+        if (response == null || !response.success() || response.data() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Test service did not return a test blueprint");
+        }
+        InternalTestBlueprintDto testBlueprint = response.data();
 
         return StartAttemptResponse.builder()
                 .attemptId(saved.getId())
@@ -200,7 +203,13 @@ public class AttemptService {
                 .collect(Collectors.toMap(AttemptAnswer::getQuestionId, AttemptAnswer::getSelectedOption));
 
         // Fetch securely from test service
-        InternalTestBlueprintDto blueprint = testServiceFeignClient.getTestBlueprint(attempt.getTestId());
+        TestServiceResponse<InternalTestBlueprintDto> response =
+                testServiceFeignClient.getTestBlueprint(attempt.getTestId());
+        if (response == null || !response.success() || response.data() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Test service did not return a test blueprint");
+        }
+        InternalTestBlueprintDto blueprint = response.data();
 
         List<QuestionReviewDto> reviewDtos = new ArrayList<>();
         
@@ -210,17 +219,18 @@ public class AttemptService {
                     for (InternalTestBlueprintDto.InternalQuestionDto q : section.getQuestions()) {
                         
                         // Handle case where student left it completely blank
-                        String selected = answerMap.getOrDefault(q.getId(), null);
-                        
+                        String selected = answerMap.get(q.getQuestionId());
+
                         String correctOpt = null;
-                        if (q.getCorrectAnswerJson() != null) {
+                        if (q.getCorrectAnswer() != null) {
                             if ("MCQ".equalsIgnoreCase(q.getQuestionType())) {
-                                correctOpt = (String) q.getCorrectAnswerJson().get("key");
+                                Object key = q.getCorrectAnswer().get("key");
+                                correctOpt = key != null ? key.toString() : null;
                             } else if ("MULTI_CORRECT".equalsIgnoreCase(q.getQuestionType())) {
-                                Object keys = q.getCorrectAnswerJson().get("keys");
+                                Object keys = q.getCorrectAnswer().get("keys");
                                 correctOpt = keys != null ? keys.toString() : null;
                             } else if ("NUMERICAL".equalsIgnoreCase(q.getQuestionType())) {
-                                Object val = q.getCorrectAnswerJson().get("value");
+                                Object val = q.getCorrectAnswer().get("value");
                                 correctOpt = val != null ? val.toString() : null;
                             }
                         }
@@ -230,7 +240,7 @@ public class AttemptService {
                                 : "Question text unavailable";
 
                         reviewDtos.add(QuestionReviewDto.builder()
-                                .questionId(q.getId())
+                                .questionId(q.getQuestionId())
                                 .questionText(qText)
                                 .selectedOption(selected)
                                 .correctOption(correctOpt)
@@ -310,11 +320,10 @@ public class AttemptService {
         emitter.onCompletion(remove);
         emitter.onTimeout(remove);
         emitter.onError(error -> remove.run());
-    public SseEmitter getMockedSseEmitter(String attemptId) {
-        SseEmitter emitter = new SseEmitter(0L); 
         try {
             emitter.send(SseEmitter.event().name("connected").data(Map.of("attemptId", attemptId)));
         } catch (Exception ex) {
+            remove.run();
             emitter.completeWithError(ex);
         }
         return emitter;

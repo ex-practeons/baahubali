@@ -1,31 +1,45 @@
 package com.example.attemptservice.dto.internal;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class InternalTestBlueprintDto {
-    private String id;
+    private String testId;
     private String title;
+    private Integer durationMinutes;
+    private String instructions;
+    private BigDecimal totalMarks;
+    private Boolean free;
     private List<InternalSectionDto> sections;
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class InternalSectionDto {
-        private String id;
+        private String sectionId;
+        private String title;
+        private Integer sequenceOrder;
+        private Integer durationMinutes;
+        private Boolean shuffleQuestions;
         private List<InternalQuestionDto> questions;
     }
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class InternalQuestionDto {
-        private String id;
+        private String questionId;
+        private Integer sequenceOrder;
         private String questionType;
         private List<InternalTranslationDto> translations;
-        private Map<String, Object> correctAnswerJson;
+        @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+        private Map<String, Object> correctAnswer;
+        private BigDecimal positiveMarks;
+        private BigDecimal negativeMarks;
         private String explanation;
     }
 
@@ -34,5 +48,6 @@ public class InternalTestBlueprintDto {
     public static class InternalTranslationDto {
         private String language;
         private String questionText;
+        private String optionsJson;
     }
 }

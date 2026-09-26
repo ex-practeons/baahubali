@@ -2,6 +2,7 @@ package com.example.attemptservice.client;
 
 import com.example.attemptservice.config.TestServiceFeignConfig;
 import com.example.attemptservice.dto.internal.InternalTestBlueprintDto;
+import com.example.attemptservice.dto.internal.TestServiceResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,5 +15,5 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface TestServiceFeignClient {
 
     @GetMapping("/internal/mock-tests/{id}/blueprint")
-    InternalTestBlueprintDto getTestBlueprint(@PathVariable("id") String testId);
+    TestServiceResponse<InternalTestBlueprintDto> getTestBlueprint(@PathVariable("id") String testId);
 }
