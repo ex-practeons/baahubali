@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   baahubali-redis:
     image: redis:7-alpine
@@ -89,6 +87,27 @@ services:
     env_file:
       - .env
       - ./test-service/.env
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: baahubali-kafka:29092
+    networks:
+      - backend-network
+    depends_on:
+      - baahubali-redis
+      - baahubali-kafka
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  attempt-service:
+    build:
+      context: .
+      dockerfile: attempt-service/Dockerfile
+    container_name: attempt-service
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ./attempt-service/.env
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: baahubali-kafka:29092
     networks:
