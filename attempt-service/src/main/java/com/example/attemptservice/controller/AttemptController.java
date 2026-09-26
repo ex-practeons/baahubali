@@ -44,18 +44,18 @@ public class AttemptController {
 
     @GetMapping("/{id}")
     public ResponseEntity<AttemptStateResponse> getAttempt(@PathVariable String id) {
-        return ResponseEntity.ok(attemptService.getMockedAttemptState(id));
+        return ResponseEntity.ok(attemptService.getAttemptState(id));
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<PatchAttemptResponse> patchAttempt(@PathVariable String id,
                                                                @RequestBody PatchAttemptRequest request) {
-        return ResponseEntity.ok(attemptService.getMockedPatchAck(id, request));
+        return ResponseEntity.ok(attemptService.patchAttempt(id, request));
     }
 
     @GetMapping(value = "/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamAttempt(@PathVariable String id) {
-        return attemptService.getMockedSseEmitter(id);
+        return attemptService.getSseEmitter(id);
     }
 
     @GetMapping("/history")
