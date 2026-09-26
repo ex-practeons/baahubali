@@ -12,6 +12,7 @@ import com.example.attemptservice.dto.StartAttemptRequest;
 import com.example.attemptservice.dto.StartAttemptResponse;
 import com.example.attemptservice.dto.SubmitAttemptResponse;
 import com.example.attemptservice.dto.internal.InternalTestBlueprintDto;
+import com.example.attemptservice.dto.internal.TestServiceResponse;
 import com.example.attemptservice.entity.Attempt;
 import com.example.attemptservice.entity.AttemptAnswer;
 import com.example.attemptservice.entity.AttemptStatus;
@@ -28,6 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.http.HttpStatus;
@@ -123,7 +127,13 @@ public class AttemptService {
                 });
 
         // Hydrate live test data securely from test-service
-        InternalTestBlueprintDto testBlueprint = testServiceFeignClient.getTestBlueprint(saved.getTestId());
+        TestServiceResponse<InternalTestBlueprintDto> response =
+                testServiceFeignClient.getTestBlueprint(saved.getTestId());
+        if (response == null || !response.success() || response.data() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Test service did not return a test blueprint");
+        }
+        InternalTestBlueprintDto testBlueprint = response.data();
 
         return StartAttemptResponse.builder()
                 .attemptId(saved.getId())
@@ -168,8 +178,9 @@ public class AttemptService {
     }
 
     @Transactional(readOnly = true)
-    public AttemptHistoryResponse getHistory(String userId) {
-        List<Attempt> rawAttempts = attemptRepository.findByUserIdOrderByStartedAtDesc(userId);
+    public Page<AttemptHistorySummary> getHistory(String userId, int page, int size) {
+        Page<Attempt> rawAttempts = attemptRepository.findByUserId(userId,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startedAt")));
         
         List<AttemptHistorySummary> historySummaries = rawAttempts.stream()
                 .map(attempt -> AttemptHistorySummary.builder()
@@ -179,11 +190,10 @@ public class AttemptService {
                         .finalScore(attempt.getFinalScore())
                         .startedAt(attempt.getStartedAt())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
-        return AttemptHistoryResponse.builder()
-                .attempts(historySummaries)
-                .build();
+        return new org.springframework.data.domain.PageImpl<>(historySummaries, rawAttempts.getPageable(),
+                rawAttempts.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -196,7 +206,13 @@ public class AttemptService {
                 .collect(Collectors.toMap(AttemptAnswer::getQuestionId, AttemptAnswer::getSelectedOption));
 
         // Fetch securely from test service
-        InternalTestBlueprintDto blueprint = testServiceFeignClient.getTestBlueprint(attempt.getTestId());
+        TestServiceResponse<InternalTestBlueprintDto> response =
+                testServiceFeignClient.getTestBlueprint(attempt.getTestId());
+        if (response == null || !response.success() || response.data() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Test service did not return a test blueprint");
+        }
+        InternalTestBlueprintDto blueprint = response.data();
 
         List<QuestionReviewDto> reviewDtos = new ArrayList<>();
         
@@ -206,17 +222,18 @@ public class AttemptService {
                     for (InternalTestBlueprintDto.InternalQuestionDto q : section.getQuestions()) {
                         
                         // Handle case where student left it completely blank
-                        String selected = answerMap.getOrDefault(q.getId(), null);
-                        
+                        String selected = answerMap.get(q.getQuestionId());
+
                         String correctOpt = null;
-                        if (q.getCorrectAnswerJson() != null) {
+                        if (q.getCorrectAnswer() != null) {
                             if ("MCQ".equalsIgnoreCase(q.getQuestionType())) {
-                                correctOpt = (String) q.getCorrectAnswerJson().get("key");
+                                Object key = q.getCorrectAnswer().get("key");
+                                correctOpt = key != null ? key.toString() : null;
                             } else if ("MULTI_CORRECT".equalsIgnoreCase(q.getQuestionType())) {
-                                Object keys = q.getCorrectAnswerJson().get("keys");
+                                Object keys = q.getCorrectAnswer().get("keys");
                                 correctOpt = keys != null ? keys.toString() : null;
                             } else if ("NUMERICAL".equalsIgnoreCase(q.getQuestionType())) {
-                                Object val = q.getCorrectAnswerJson().get("value");
+                                Object val = q.getCorrectAnswer().get("value");
                                 correctOpt = val != null ? val.toString() : null;
                             }
                         }
@@ -226,7 +243,7 @@ public class AttemptService {
                                 : "Question text unavailable";
 
                         reviewDtos.add(QuestionReviewDto.builder()
-                                .questionId(q.getId())
+                                .questionId(q.getQuestionId())
                                 .questionText(qText)
                                 .selectedOption(selected)
                                 .correctOption(correctOpt)
@@ -244,12 +261,12 @@ public class AttemptService {
                 .build();
     }
 
-    public AttemptStateResponse getAttemptState(String attemptId) {
+    public AttemptStateSnapshot getAttemptState(String attemptId) {
         AttemptRedisHash hash = attemptRedisRepository.findById(attemptId).orElseGet(() -> rehydrate(attemptId));
-        return toStateResponse(hash);
+        return new AttemptStateSnapshot(toStateResponse(hash), hash.getVersion());
     }
 
-    public PatchAttemptResponse patchAttempt(String attemptId, PatchAttemptRequest request) {
+    public Long patchAttempt(String attemptId, PatchAttemptRequest request) {
         if (request.getQuestionId() == null || request.getQuestionId().isBlank()
                 || request.getVersion() == null || request.getCurrentQuestionIndex() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -292,7 +309,7 @@ public class AttemptService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Attempt version conflict; reload the latest state and retry");
         }
-        return PatchAttemptResponse.builder().success(true).version(nextVersion).build();
+        return nextVersion;
     }
 
     public SseEmitter getSseEmitter(String attemptId) {
@@ -306,16 +323,6 @@ public class AttemptService {
         emitter.onCompletion(remove);
         emitter.onTimeout(remove);
         emitter.onError(error -> remove.run());
-        return emitter;
-    }
-
-    public SseEmitter getMockedSseEmitter(String attemptId) {
-        SseEmitter emitter = new SseEmitter(0L); 
-        try {
-            emitter.send(SseEmitter.event().name("connected").data(Map.of("attemptId", attemptId)));
-        } catch (Exception ex) {
-            emitter.completeWithError(ex);
-        }
         return emitter;
     }
 
@@ -341,8 +348,10 @@ public class AttemptService {
         return AttemptStateResponse.builder().attemptId(hash.getAttemptId()).userId(hash.getUserId())
                 .testId(hash.getExamId()).status(hash.getStatus())
                 .currentQuestionIndex(hash.getCurrentQuestionIndex()).answers(readAnswers(hash.getAnswersJson()))
-                .version(hash.getVersion()).build();
+                .build();
     }
+
+    public record AttemptStateSnapshot(AttemptStateResponse state, Long attemptVersion) { }
 
     private Map<String, String> readAnswers(String json) {
         if (json == null || json.isBlank()) return new java.util.LinkedHashMap<>();

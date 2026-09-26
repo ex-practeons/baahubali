@@ -13,5 +13,4 @@ import lombok.Setter;
 @Builder
 public class PatchAttemptResponse {
     private boolean success;
-    private Long version;
 }

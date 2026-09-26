@@ -20,5 +20,4 @@ public class AttemptStateResponse {
     private String status;
     private Integer currentQuestionIndex;
     private Map<String, String> answers;
-    private Long version;
 }

@@ -1,6 +1,8 @@
 server:
   servlet:
     context-path: /attempts-api
+  tomcat:
+    redirect-context-root: false
 
 spring:
   application:

@@ -15,7 +15,7 @@ public record ApiResponse<T>(
         ApiErrorResponse error,
         Map<String, Object> meta
 ) {
-    private static final String API_VERSION = "0.0.1-SNAPSHOT";
+    private static final String API_VERSION = "1.2.0";
 
     public static <T> ApiResponse<T> success(int status, String message, T data) {
         return new ApiResponse<>(true, status, message, data, null, defaultMeta());

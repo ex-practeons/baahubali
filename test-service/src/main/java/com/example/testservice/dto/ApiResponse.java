@@ -75,6 +75,7 @@ public class ApiResponse<T> {
                     .pagination(new Pagination(page.total(), page.page(), page.totalPages(), page.limit(),
                             page.page() < page.totalPages(), page.page() > 1))
                     .timestamp(Instant.now().toString())
+                    .version("1.2.0")
                     .build();
         }
     }
