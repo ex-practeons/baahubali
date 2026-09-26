@@ -15,7 +15,6 @@ import com.example.attemptservice.dto.internal.InternalTestBlueprintDto;
 import com.example.attemptservice.entity.Attempt;
 import com.example.attemptservice.entity.AttemptAnswer;
 import com.example.attemptservice.entity.AttemptStatus;
-import com.example.attemptservice.entity.AttemptAnswer;
 import com.example.attemptservice.event.AttemptSubmittedEvent;
 import com.example.attemptservice.exception.AttemptNotFoundException;
 import com.example.attemptservice.redis.AttemptRedisHash;
@@ -60,7 +59,6 @@ public class AttemptService {
     private final AttemptRedisRepository attemptRedisRepository;
     private final AttemptFlushWorker attemptFlushWorker;
     private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final AttemptAnswerRepository attemptAnswerRepository;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
@@ -76,15 +74,13 @@ public class AttemptService {
                           AttemptRedisRepository attemptRedisRepository,
                           @Lazy AttemptFlushWorker attemptFlushWorker,
                           KafkaTemplate<String, Object> kafkaTemplate,
-                          AttemptAnswerRepository attemptAnswerRepository,
-                          StringRedisTemplate redisTemplate) {
+                          StringRedisTemplate redisTemplate,
                           TestServiceFeignClient testServiceFeignClient) {
         this.attemptRepository = attemptRepository;
         this.attemptAnswerRepository = attemptAnswerRepository;
         this.attemptRedisRepository = attemptRedisRepository;
         this.attemptFlushWorker = attemptFlushWorker;
         this.kafkaTemplate = kafkaTemplate;
-        this.attemptAnswerRepository = attemptAnswerRepository;
         this.redisTemplate = redisTemplate;
         heartbeatExecutor.scheduleAtFixedRate(this::sendHeartbeats, 20, 20, TimeUnit.SECONDS);
         this.testServiceFeignClient = testServiceFeignClient;
@@ -310,6 +306,9 @@ public class AttemptService {
         emitter.onCompletion(remove);
         emitter.onTimeout(remove);
         emitter.onError(error -> remove.run());
+        return emitter;
+    }
+
     public SseEmitter getMockedSseEmitter(String attemptId) {
         SseEmitter emitter = new SseEmitter(0L); 
         try {
