@@ -326,17 +326,6 @@ public class AttemptService {
         return emitter;
     }
 
-    public SseEmitter getMockedSseEmitter(String attemptId) {
-        SseEmitter emitter = new SseEmitter(0L); 
-        try {
-            emitter.send(SseEmitter.event().name("connected").data(Map.of("attemptId", attemptId)));
-        } catch (Exception ex) {
-            remove.run();
-            emitter.completeWithError(ex);
-        }
-        return emitter;
-    }
-
     private AttemptRedisHash rehydrate(String attemptId) {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new AttemptNotFoundException(attemptId));
