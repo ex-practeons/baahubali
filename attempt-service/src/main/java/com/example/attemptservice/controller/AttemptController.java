@@ -3,6 +3,7 @@ package com.example.attemptservice.controller;
 import com.example.attemptservice.dto.AttemptHistoryResponse;
 import com.example.attemptservice.dto.AttemptReviewResponse;
 import com.example.attemptservice.dto.AttemptStateResponse;
+import com.example.attemptservice.dto.ApiResponse;
 import com.example.attemptservice.dto.PatchAttemptRequest;
 import com.example.attemptservice.dto.PatchAttemptResponse;
 import com.example.attemptservice.dto.StartAttemptRequest;
@@ -32,7 +33,7 @@ public class AttemptController {
     }
 
     @PostMapping
-    public ResponseEntity<StartAttemptResponse> startAttempt(
+    public ResponseEntity<ApiResponse<StartAttemptResponse>> startAttempt(
             @RequestHeader(value = "X-User-Id", required = false) String headerUserId, 
             @RequestBody StartAttemptRequest request) {
         
@@ -40,23 +41,24 @@ public class AttemptController {
         if (headerUserId != null && !headerUserId.isEmpty()) {
             request.setUserId(headerUserId);
         }
-        return ResponseEntity.status(HttpStatus.CREATED).body(attemptService.startAttempt(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiResponse.success(HttpStatus.CREATED.value(), "Attempt started successfully", attemptService.startAttempt(request)));
     }
 
     @PostMapping("/{id}/submit")
-    public ResponseEntity<SubmitAttemptResponse> submitAttempt(@PathVariable String id) {
-        return ResponseEntity.ok(attemptService.submitAttempt(id));
+    public ResponseEntity<ApiResponse<SubmitAttemptResponse>> submitAttempt(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(200, "Attempt submitted successfully", attemptService.submitAttempt(id)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AttemptStateResponse> getAttempt(@PathVariable String id) {
-        return ResponseEntity.ok(attemptService.getAttemptState(id));
+    public ResponseEntity<ApiResponse<AttemptStateResponse>> getAttempt(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(200, "Attempt retrieved successfully", attemptService.getAttemptState(id)));
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<PatchAttemptResponse> patchAttempt(@PathVariable String id,
+    public ResponseEntity<ApiResponse<PatchAttemptResponse>> patchAttempt(@PathVariable String id,
                                                                @RequestBody PatchAttemptRequest request) {
-        return ResponseEntity.ok(attemptService.patchAttempt(id, request));
+        return ResponseEntity.ok(ApiResponse.success(200, "Attempt updated successfully", attemptService.patchAttempt(id, request)));
     }
 
     @GetMapping(value = "/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -65,12 +67,12 @@ public class AttemptController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<AttemptHistoryResponse> getHistory(@RequestHeader("X-User-Id") String userId) {
-        return ResponseEntity.ok(attemptService.getHistory(userId));
+    public ResponseEntity<ApiResponse<AttemptHistoryResponse>> getHistory(@RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(ApiResponse.success(200, "Attempt history retrieved successfully", attemptService.getHistory(userId)));
     }
 
     @GetMapping("/{id}/review")
-    public ResponseEntity<AttemptReviewResponse> getReview(@PathVariable String id) {
-        return ResponseEntity.ok(attemptService.getReview(id));
+    public ResponseEntity<ApiResponse<AttemptReviewResponse>> getReview(@PathVariable String id) {
+        return ResponseEntity.ok(ApiResponse.success(200, "Attempt review retrieved successfully", attemptService.getReview(id)));
     }
 }
