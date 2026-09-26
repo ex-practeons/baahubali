@@ -28,6 +28,8 @@ public class PublicRouteMatcher {
             return true;
         }
         PathContainer path = request.getPath().pathWithinApplication();
+
+        
         return publicPatterns.stream().anyMatch(pattern -> pattern.matches(path));
     }
 }

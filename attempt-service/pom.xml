@@ -3,7 +3,6 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>com.example</groupId>
         <artifactId>testing-platform</artifactId>
@@ -14,7 +13,7 @@
     <artifactId>attempt-service</artifactId>
     <packaging>jar</packaging>
     <name>attempt-service</name>
-    <description>Exam Engine - owns the lifecycle of a student's test attempt (live session + historical review)</description>
+    <description>Exam Engine - owns the lifecycle of a student's test attempt</description>
 
     <properties>
         <java.version>21</java.version>
@@ -22,21 +21,11 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
     </properties>
 
-    <!--
-      Versions for spring-boot-starter-* / lombok / mysql-connector-j are intentionally
-      omitted: this assumes the "testing-platform" parent pom either extends
-      spring-boot-starter-parent or imports the spring-boot-dependencies BOM in
-      <dependencyManagement>. If that's not the case yet, add explicit <version> tags
-      below or a <dependencyManagement> block in the parent pom.
-    -->
     <dependencies>
-        <!-- Web layer: REST controllers, SSE -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
-        <!-- Layer B: MySQL persistence via JPA -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -46,32 +35,31 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
-
-        <!-- Layer A: Redis fast-write hash -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
-
-        <!-- Request/response validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+        
+        <!-- OpenFeign for Cross-Service Communication -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
 
-        <!-- Boilerplate reduction on entities/DTOs -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -80,7 +68,6 @@
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-mysql</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
@@ -104,5 +91,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

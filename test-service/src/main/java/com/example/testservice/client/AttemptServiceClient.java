@@ -19,6 +19,6 @@ public interface AttemptServiceClient {
     @GetMapping("/internal/attempts/active-exists/{testId}")
     boolean hasActiveAttempts(
             @PathVariable("testId") UUID testId,
-            @RequestHeader("X-Internal-Auth") String internalSecret
+            @RequestHeader("X-Service-Auth") String internalSecret
     );
 }

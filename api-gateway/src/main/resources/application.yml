@@ -26,22 +26,18 @@ spring:
       server:
         webflux:
           routes:
-            - id: iam-service-auth
+            - id: iam-service
               uri: ${IAM_SERVICE_URL:http://localhost:8080}
               predicates:
-                - Path=/api/auth/**
-            - id: iam-service-users
-              uri: ${IAM_SERVICE_URL:http://localhost:8080}
-              predicates:
-                - Path=/api/users/**
+                - Path=/auth-api/**
             - id: test-service
               uri: ${TEST_SERVICE_URL:http://localhost:8080}
               predicates:
-                - Path=/api/tests/**
+                - Path=/tests-api/**
             - id: attempt-service
               uri: ${ATTEMPT_SERVICE_URL:http://localhost:8080}
               predicates:
-                - Path=/api/attempts/**
+                - Path=/attempts-api/**
 
 logging:
   level:
@@ -52,21 +48,42 @@ springdoc:
     path: /swagger-ui.html
     urls:
       - name: IAM Service
-        url: /api/auth/v3/api-docs
+        url: /auth-api/v3/api-docs
       - name: Test Service
-        url: /api/tests/v3/api-docs
+        url: /tests-api/v3/api-docs
+      - name: Attempts Service
+        url: /attempts-api/v3/api-docs
 
 gateway:
   security:
     public-paths:
-      - /api/auth/login
-      - /api/auth/register
-      - /api/*/public/**
-      - /api/*/swagger-ui.html
-      - /api/*/swagger-ui/**
-      - /api/*/v3/api-docs
-      - /api/*/v3/api-docs/**
-      - /api/*/webjars/**
+      # IAM public endpoints
+      - /auth-api/login
+      - /auth-api/register
+
+      # Public APIs exposed through services
+      - /tests-api/public/**
+
+      # Swagger / OpenAPI through Gateway
+      - /auth-api/swagger-ui.html
+      - /auth-api/swagger-ui/**
+      - /auth-api/v3/api-docs
+      - /auth-api/v3/api-docs/**
+      - /auth-api/webjars/**
+
+      - /tests-api/swagger-ui.html
+      - /tests-api/swagger-ui/**
+      - /tests-api/v3/api-docs
+      - /tests-api/v3/api-docs/**
+      - /tests-api/webjars/**
+
+      - /attempts-api/swagger-ui.html
+      - /attempts-api/swagger-ui/**
+      - /attempts-api/v3/api-docs
+      - /attempts-api/v3/api-docs/**
+      - /attempts-api/webjars/**
+
+      # Gateway's own Swagger UI
       - /swagger-ui.html
       - /swagger-ui/**
       - /v3/api-docs/**

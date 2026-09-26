@@ -1,6 +1,6 @@
 ﻿server:
   servlet:
-    context-path: /api/tests
+    context-path: /tests-api
 
 spring:
   application:
@@ -33,9 +33,8 @@ spring:
 
 internal:
   auth:
-    secret: ${INTERNAL_AUTH_SECRET:secret123}
-  attempt-service:
-    url: ${INTERNAL_ATTEMPT_SERVICE_URL:http://localhost:8081}
+    allowed-clients:
+      attempt-service: ${ATTEMPT_SERVICE_SECRET:attempt-secret-key}
 
 logging:
   level:

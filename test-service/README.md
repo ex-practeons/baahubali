@@ -17,4 +17,4 @@ Math content inside `question_text` and `options_json` values is wrapped in sing
 - Rendering (e.g., via KaTeX or MathJax) is strictly the responsibility of the frontend client.
 
 ## Internal Authentication
-The `InternalQuestionController` requires an `X-Internal-Auth` header. The secret is configured via `internal.auth.secret` (defaults to `secret123`). Only internal services (like the Attempt Service) should use the `TestServiceInternalClient` and provide this secret to fetch the answer key.
+The `InternalQuestionController` requires an `X-Service-Auth` header. The secret is configured via `internal.auth.secret` (defaults to `secret123`). Only internal services (like the Attempt Service) should use the `TestServiceInternalClient` and provide this secret to fetch the answer key.

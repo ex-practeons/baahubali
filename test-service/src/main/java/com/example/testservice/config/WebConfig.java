@@ -10,9 +10,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig implements WebMvcConfigurer {
 
     private final AdminRoleInterceptor adminRoleInterceptor;
+    private final InternalAuthInterceptor internalAuthInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(internalAuthInterceptor)
+                .addPathPatterns("/internal/**");
+
         registry.addInterceptor(adminRoleInterceptor)
                 .addPathPatterns("/admin/**"); 
     }
