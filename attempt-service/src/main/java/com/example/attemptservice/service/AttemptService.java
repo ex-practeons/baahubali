@@ -12,8 +12,14 @@ import com.example.attemptservice.dto.StartAttemptResponse;
 import com.example.attemptservice.dto.SubmitAttemptResponse;
 import com.example.attemptservice.entity.Attempt;
 import com.example.attemptservice.entity.AttemptStatus;
+import com.example.attemptservice.event.AttemptSubmittedEvent;
 import com.example.attemptservice.exception.AttemptNotFoundException;
+import com.example.attemptservice.redis.AttemptRedisRepository;
 import com.example.attemptservice.repository.AttemptRepository;
+import com.example.attemptservice.worker.AttemptFlushWorker;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -23,28 +29,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class AttemptService {
 
     private static final int DEFAULT_DURATION_MINUTES = 180;
 
     private final AttemptRepository attemptRepository;
+    private final AttemptRedisRepository attemptRedisRepository;
+    private final AttemptFlushWorker attemptFlushWorker;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public AttemptService(AttemptRepository attemptRepository) {
+    public AttemptService(AttemptRepository attemptRepository,
+                          AttemptRedisRepository attemptRedisRepository,
+                          @Lazy AttemptFlushWorker attemptFlushWorker,
+                          KafkaTemplate<String, Object> kafkaTemplate) {
         this.attemptRepository = attemptRepository;
+        this.attemptRedisRepository = attemptRedisRepository;
+        this.attemptFlushWorker = attemptFlushWorker;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
-    // -----------------------------------------------------------------
-    // Core logic (real, synchronous) - the two endpoints in this
-    // build's scope.
-    // -----------------------------------------------------------------
-
-    /**
-     * Creates the DB row and returns the attempt id + deadline.
-     * NOT yet wired up: Redis hydration (Layer A init) and the secure
-     * blueprint fetch from test-service - testPayload below is mocked
-     * until that integration lands.
-     */
     @Transactional
     public StartAttemptResponse startAttempt(StartAttemptRequest request) {
         Attempt attempt = Attempt.builder()
@@ -68,30 +73,41 @@ public class AttemptService {
                 .build();
     }
 
-    /**
-     * Marks the DB row submitted. Idempotent: submitting an
-     * already-submitted attempt just returns its current state rather
-     * than erroring. NOT yet wired up: flushing final Redis answers,
-     * publishing AttemptSubmittedEvent to Kafka, clearing Redis.
-     */
     @Transactional
     public SubmitAttemptResponse submitAttempt(String attemptId) {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new AttemptNotFoundException(attemptId));
 
-        if (attempt.getStatus() != AttemptStatus.SUBMITTED) {
-            attempt.setStatus(AttemptStatus.SUBMITTED);
-            attempt = attemptRepository.save(attempt);
+        if (attempt.getStatus() == AttemptStatus.SUBMITTED || attempt.getStatus() == AttemptStatus.EXPIRED) {
+            return toSubmitResponse(attempt);
         }
 
+        finalizeAttempt(attempt, AttemptStatus.SUBMITTED);
         return toSubmitResponse(attempt);
     }
 
-    // -----------------------------------------------------------------
-    // Skeletons: mocked responses for endpoints whose real logic
-    // (Redis reads/writes, SSE health monitoring, cross-service review
-    // aggregation) hasn't been built yet.
-    // -----------------------------------------------------------------
+    @Transactional
+    public void finalizeAttempt(Attempt attempt, AttemptStatus finalStatus) {
+        if (attempt.getStatus() == AttemptStatus.SUBMITTED || attempt.getStatus() == AttemptStatus.EXPIRED) {
+            return;
+        }
+
+        final String attemptId = attempt.getId();
+        attempt.setStatus(finalStatus);
+        attemptRepository.save(attempt);
+
+        attemptRedisRepository.findById(attemptId).ifPresent(hash -> {
+            try {
+                attemptFlushWorker.flushAnswers(hash);
+            } catch (Exception e) {
+                log.error("Failed to flush final answers for attemptId: {}", attemptId, e);
+            }
+            attemptRedisRepository.deleteById(attemptId);
+        });
+
+        kafkaTemplate.send("attempt-submitted-events", attemptId, new AttemptSubmittedEvent(attemptId));
+    }
+
 
     public AttemptStateResponse getMockedAttemptState(String attemptId) {
         return AttemptStateResponse.builder()

@@ -88,3 +88,21 @@ the gateway:
 
 Raw OpenAPI JSON is available at the same path with `swagger-ui.html`
 swapped for `v3/api-docs` (e.g. `http://localhost:8080/api/auth/v3/api-docs`).
+
+### Testing Attempt Service Background Workers (Cron)
+
+The `attempt-service` runs two background scheduled workers:
+1. **Write-Behind Flush Worker (every 15s):** Persists Redis answers to MySQL.
+2. **Zombie Session Sweeper (every 2m):** Finds and automatically expires abandoned test sessions.
+
+**To manually trigger/test the Zombie Session Sweeper without waiting hours:**
+1. Login to get your auth cookie (via `/api/auth/register` or `login`).
+2. Create an **instantly expired** attempt by setting `durationMinutes: 0`:
+   \\\ash
+   curl --location 'http://localhost:8080/api/attempts' \
+   --header 'Content-Type: application/json' \
+   --header 'Cookie: ACCESS_TOKEN=<your_token>' \
+   --data '{"userId": "<user_id>", "testId": "test-456", "durationMinutes": 0}'
+   \\\
+3. Do not submit the attempt. Wait 2 minutes and check your backend logs (`docker logs attempt-service`) or query your MySQL `attempts` table. You will see the sweeper automatically detect the expired session, flush it, broadcast to Kafka, and mark it as `EXPIRED`.
+
