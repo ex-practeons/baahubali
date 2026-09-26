@@ -48,9 +48,7 @@ public class AttemptController {
                 ApiResponse.success(HttpStatus.CREATED.value(), "Attempt started successfully", attemptService.startAttempt(request)));
     }
 
-    @org.springframework.web.bind.annotation.RequestMapping(
-            path = {"/{id}/submit", "/api/attempts/{id}/submit"},
-            method = {RequestMethod.POST, RequestMethod.GET})
+    @PostMapping("/{id}/submit")
     public ResponseEntity<ApiResponse<SubmitAttemptResponse>> submitAttempt(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(200, "Attempt submitted successfully", attemptService.submitAttempt(id)));
     }

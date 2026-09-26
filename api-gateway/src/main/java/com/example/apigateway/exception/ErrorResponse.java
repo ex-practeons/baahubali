@@ -11,7 +11,7 @@ public record ErrorResponse(
         Error error,
         Meta meta) {
 
-    public static ErrorResponse of(AuthErrorCode errorCode) {
+    public static ErrorResponse of(GatewayErrorCode errorCode) {
         return new ErrorResponse(
                 false,
                 errorCode.getStatus().value(),
@@ -22,6 +22,5 @@ public record ErrorResponse(
 
     public record Error(String code, List<?> details) {}
 
-    // This component name preserves the API contract's snake_case JSON key.
     public record Meta(String timestamp, String trace_id) {}
 }

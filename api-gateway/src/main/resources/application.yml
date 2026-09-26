@@ -23,6 +23,9 @@ spring:
               - OPTIONS
             allowedHeaders: "*"
             allowCredentials: true
+      redis-rate-limiter:
+        include-headers: true
+        deny-empty-key: true
       server:
         webflux:
           routes:
@@ -30,14 +33,35 @@ spring:
               uri: ${IAM_SERVICE_URL:http://localhost:8080}
               predicates:
                 - Path=/auth-api/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userOrIpKeyResolver}"
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
             - id: test-service
               uri: ${TEST_SERVICE_URL:http://localhost:8080}
               predicates:
                 - Path=/tests-api/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userOrIpKeyResolver}"
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
             - id: attempt-service
               uri: ${ATTEMPT_SERVICE_URL:http://localhost:8080}
               predicates:
                 - Path=/attempts-api/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userOrIpKeyResolver}"
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
 
 logging:
   level:
@@ -57,33 +81,24 @@ springdoc:
 gateway:
   security:
     public-paths:
-      # IAM public endpoints
       - /auth-api/login
       - /auth-api/register
-
-      # Public APIs exposed through services
       - /tests-api/public/**
-
-      # Swagger / OpenAPI through Gateway
       - /auth-api/swagger-ui.html
       - /auth-api/swagger-ui/**
       - /auth-api/v3/api-docs
       - /auth-api/v3/api-docs/**
       - /auth-api/webjars/**
-
       - /tests-api/swagger-ui.html
       - /tests-api/swagger-ui/**
       - /tests-api/v3/api-docs
       - /tests-api/v3/api-docs/**
       - /tests-api/webjars/**
-
       - /attempts-api/swagger-ui.html
       - /attempts-api/swagger-ui/**
       - /attempts-api/v3/api-docs
       - /attempts-api/v3/api-docs/**
       - /attempts-api/webjars/**
-
-      # Gateway's own Swagger UI
       - /swagger-ui.html
       - /swagger-ui/**
       - /v3/api-docs/**
