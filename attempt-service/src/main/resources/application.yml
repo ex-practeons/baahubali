@@ -1,5 +1,6 @@
 server:
-  port: 8080
+  servlet:
+    context-path: /attempts-api
 
 spring:
   application:
@@ -32,6 +33,6 @@ spring:
 
 internal:
   auth:
-    secret: ${INTERNAL_AUTH_SECRET:changeme}
+    my-secret: ${ATTEMPT_SERVICE_SECRET:attempt-secret-key}
   test-service:
-    base-url: ${TEST_SERVICE_URL:http://test-service:8080}
+    base-url: ${TEST_SERVICE_URL:http://test-service:8080/tests-api}

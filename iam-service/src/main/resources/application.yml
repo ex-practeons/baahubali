@@ -1,3 +1,7 @@
+server:
+  servlet:
+    context-path: /auth-api
+
 spring:
   application:
     name: iam-service
@@ -43,6 +47,6 @@ app:
 
 springdoc:
   api-docs:
-    path: /api/auth/v3/api-docs
+    path: /auth-api/v3/api-docs
   swagger-ui:
-    path: /api/auth/swagger-ui.html
+    path: /auth-api/swagger-ui.html

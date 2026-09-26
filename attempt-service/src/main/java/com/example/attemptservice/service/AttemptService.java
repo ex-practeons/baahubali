@@ -1,5 +1,6 @@
 package com.example.attemptservice.service;
 
+import com.example.attemptservice.client.TestServiceFeignClient;
 import com.example.attemptservice.dto.AttemptHistoryResponse;
 import com.example.attemptservice.dto.AttemptHistorySummary;
 import com.example.attemptservice.dto.AttemptReviewResponse;
@@ -10,11 +11,14 @@ import com.example.attemptservice.dto.QuestionReviewDto;
 import com.example.attemptservice.dto.StartAttemptRequest;
 import com.example.attemptservice.dto.StartAttemptResponse;
 import com.example.attemptservice.dto.SubmitAttemptResponse;
+import com.example.attemptservice.dto.internal.InternalTestBlueprintDto;
 import com.example.attemptservice.entity.Attempt;
+import com.example.attemptservice.entity.AttemptAnswer;
 import com.example.attemptservice.entity.AttemptStatus;
 import com.example.attemptservice.event.AttemptSubmittedEvent;
 import com.example.attemptservice.exception.AttemptNotFoundException;
 import com.example.attemptservice.redis.AttemptRedisRepository;
+import com.example.attemptservice.repository.AttemptAnswerRepository;
 import com.example.attemptservice.repository.AttemptRepository;
 import com.example.attemptservice.worker.AttemptFlushWorker;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -36,18 +42,24 @@ public class AttemptService {
     private static final int DEFAULT_DURATION_MINUTES = 180;
 
     private final AttemptRepository attemptRepository;
+    private final AttemptAnswerRepository attemptAnswerRepository;
     private final AttemptRedisRepository attemptRedisRepository;
     private final AttemptFlushWorker attemptFlushWorker;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final TestServiceFeignClient testServiceFeignClient;
 
     public AttemptService(AttemptRepository attemptRepository,
+                          AttemptAnswerRepository attemptAnswerRepository,
                           AttemptRedisRepository attemptRedisRepository,
                           @Lazy AttemptFlushWorker attemptFlushWorker,
-                          KafkaTemplate<String, Object> kafkaTemplate) {
+                          KafkaTemplate<String, Object> kafkaTemplate,
+                          TestServiceFeignClient testServiceFeignClient) {
         this.attemptRepository = attemptRepository;
+        this.attemptAnswerRepository = attemptAnswerRepository;
         this.attemptRedisRepository = attemptRedisRepository;
         this.attemptFlushWorker = attemptFlushWorker;
         this.kafkaTemplate = kafkaTemplate;
+        this.testServiceFeignClient = testServiceFeignClient;
     }
 
     @Transactional
@@ -66,10 +78,13 @@ public class AttemptService {
         Attempt saved = attemptRepository.save(attempt);
         Instant deadline = saved.getStartedAt().plusSeconds(saved.getDurationMinutes() * 60L);
 
+        // Hydrate live test data securely from test-service
+        InternalTestBlueprintDto testBlueprint = testServiceFeignClient.getTestBlueprint(saved.getTestId());
+
         return StartAttemptResponse.builder()
                 .attemptId(saved.getId())
                 .deadline(deadline)
-                .testPayload(mockedTestPayload(saved.getTestId()))
+                .testPayload(testBlueprint)
                 .build();
     }
 
@@ -108,6 +123,82 @@ public class AttemptService {
         kafkaTemplate.send("attempt-submitted-events", attemptId, new AttemptSubmittedEvent(attemptId));
     }
 
+    @Transactional(readOnly = true)
+    public AttemptHistoryResponse getHistory(String userId) {
+        List<Attempt> rawAttempts = attemptRepository.findByUserIdOrderByStartedAtDesc(userId);
+        
+        List<AttemptHistorySummary> historySummaries = rawAttempts.stream()
+                .map(attempt -> AttemptHistorySummary.builder()
+                        .attemptId(attempt.getId())
+                        .testId(attempt.getTestId())
+                        .status(attempt.getStatus().name())
+                        .finalScore(attempt.getFinalScore())
+                        .startedAt(attempt.getStartedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        return AttemptHistoryResponse.builder()
+                .attempts(historySummaries)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public AttemptReviewResponse getReview(String attemptId) {
+        Attempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new AttemptNotFoundException(attemptId));
+
+        List<AttemptAnswer> studentAnswers = attemptAnswerRepository.findByAttemptId(attemptId);
+        Map<String, String> answerMap = studentAnswers.stream()
+                .collect(Collectors.toMap(AttemptAnswer::getQuestionId, AttemptAnswer::getSelectedOption));
+
+        // Fetch securely from test service
+        InternalTestBlueprintDto blueprint = testServiceFeignClient.getTestBlueprint(attempt.getTestId());
+
+        List<QuestionReviewDto> reviewDtos = new ArrayList<>();
+        
+        if (blueprint.getSections() != null) {
+            for (InternalTestBlueprintDto.InternalSectionDto section : blueprint.getSections()) {
+                if (section.getQuestions() != null) {
+                    for (InternalTestBlueprintDto.InternalQuestionDto q : section.getQuestions()) {
+                        
+                        // Handle case where student left it completely blank
+                        String selected = answerMap.getOrDefault(q.getId(), null);
+                        
+                        String correctOpt = null;
+                        if (q.getCorrectAnswerJson() != null) {
+                            if ("MCQ".equalsIgnoreCase(q.getQuestionType())) {
+                                correctOpt = (String) q.getCorrectAnswerJson().get("key");
+                            } else if ("MULTI_CORRECT".equalsIgnoreCase(q.getQuestionType())) {
+                                Object keys = q.getCorrectAnswerJson().get("keys");
+                                correctOpt = keys != null ? keys.toString() : null;
+                            } else if ("NUMERICAL".equalsIgnoreCase(q.getQuestionType())) {
+                                Object val = q.getCorrectAnswerJson().get("value");
+                                correctOpt = val != null ? val.toString() : null;
+                            }
+                        }
+
+                        String qText = (q.getTranslations() != null && !q.getTranslations().isEmpty()) 
+                                ? q.getTranslations().get(0).getQuestionText() 
+                                : "Question text unavailable";
+
+                        reviewDtos.add(QuestionReviewDto.builder()
+                                .questionId(q.getId())
+                                .questionText(qText)
+                                .selectedOption(selected)
+                                .correctOption(correctOpt)
+                                .explanation(q.getExplanation())
+                                .build());
+                    }
+                }
+            }
+        }
+
+        return AttemptReviewResponse.builder()
+                .attemptId(attempt.getId())
+                .finalScore(attempt.getFinalScore())
+                .questions(reviewDtos)
+                .build();
+    }
 
     public AttemptStateResponse getMockedAttemptState(String attemptId) {
         return AttemptStateResponse.builder()
@@ -130,7 +221,7 @@ public class AttemptService {
     }
 
     public SseEmitter getMockedSseEmitter(String attemptId) {
-        SseEmitter emitter = new SseEmitter(0L); // no timeout for now
+        SseEmitter emitter = new SseEmitter(0L); 
         try {
             emitter.send(SseEmitter.event().name("connected").data(Map.of("attemptId", attemptId)));
         } catch (Exception ex) {
@@ -139,49 +230,11 @@ public class AttemptService {
         return emitter;
     }
 
-    public AttemptHistoryResponse getMockedHistory(String userId) {
-        AttemptHistorySummary mocked = AttemptHistorySummary.builder()
-                .attemptId(UUID.randomUUID().toString())
-                .testId("test-456")
-                .status(AttemptStatus.SUBMITTED.name())
-                .finalScore(82.5)
-                .startedAt(Instant.now().minusSeconds(86_400))
-                .build();
-
-        return AttemptHistoryResponse.builder()
-                .attempts(List.of(mocked))
-                .build();
-    }
-
-    public AttemptReviewResponse getMockedReview(String attemptId) {
-        QuestionReviewDto mockedQuestion = QuestionReviewDto.builder()
-                .questionId("q1")
-                .questionText("Mocked question text pending test-service integration")
-                .selectedOption("B")
-                .correctOption("A")
-                .explanation("Mocked explanation pending test-service integration")
-                .build();
-
-        return AttemptReviewResponse.builder()
-                .attemptId(attemptId)
-                .finalScore(82.5)
-                .questions(List.of(mockedQuestion))
-                .build();
-    }
-
     private SubmitAttemptResponse toSubmitResponse(Attempt attempt) {
         return SubmitAttemptResponse.builder()
                 .attemptId(attempt.getId())
                 .status(attempt.getStatus().name())
                 .finalScore(attempt.getFinalScore())
                 .build();
-    }
-
-    private Object mockedTestPayload(String testId) {
-        return Map.of(
-                "testId", testId,
-                "title", "Mocked Test Blueprint",
-                "note", "Real blueprint fetch from test-service not wired up yet"
-        );
     }
 }

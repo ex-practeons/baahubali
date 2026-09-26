@@ -17,13 +17,12 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
-@RequestMapping("/api/attempts")
 public class AttemptController {
 
     private final AttemptService attemptService;
@@ -33,7 +32,14 @@ public class AttemptController {
     }
 
     @PostMapping
-    public ResponseEntity<StartAttemptResponse> startAttempt(@RequestBody StartAttemptRequest request) {
+    public ResponseEntity<StartAttemptResponse> startAttempt(
+            @RequestHeader(value = "X-User-Id", required = false) String headerUserId, 
+            @RequestBody StartAttemptRequest request) {
+        
+        // Ensure request body adopts the secured header ID
+        if (headerUserId != null && !headerUserId.isEmpty()) {
+            request.setUserId(headerUserId);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(attemptService.startAttempt(request));
     }
 
@@ -59,12 +65,12 @@ public class AttemptController {
     }
 
     @GetMapping("/history")
-    public ResponseEntity<AttemptHistoryResponse> getHistory(@RequestParam(required = false) String userId) {
-        return ResponseEntity.ok(attemptService.getMockedHistory(userId));
+    public ResponseEntity<AttemptHistoryResponse> getHistory(@RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(attemptService.getHistory(userId));
     }
 
     @GetMapping("/{id}/review")
     public ResponseEntity<AttemptReviewResponse> getReview(@PathVariable String id) {
-        return ResponseEntity.ok(attemptService.getMockedReview(id));
+        return ResponseEntity.ok(attemptService.getReview(id));
     }
 }

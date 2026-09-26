@@ -42,14 +42,14 @@ mvn spring-boot:run
 
 | Method | Path                  | Auth required | Description                              |
 |--------|-----------------------|----------------|-------------------------------------------|
-| POST   | /api/auth/register    | No             | Create account, sets HttpOnly JWT cookie  |
-| POST   | /api/auth/login       | No             | Verify credentials, sets HttpOnly JWT cookie |
-| POST   | /api/auth/logout      | No             | Clears the auth cookie                    |
+| POST   | /auth-api/register    | No             | Create account, sets HttpOnly JWT cookie  |
+| POST   | /auth-api/login       | No             | Verify credentials, sets HttpOnly JWT cookie |
+| POST   | /auth-api/logout      | No             | Clears the auth cookie                    |
 | GET    | /api/users/me         | Yes            | Returns the authenticated user's profile  |
 
 ## Notes
 
-- The Gateway proxies `/api/auth/register` and `/api/auth/login` straight through to this
+- The Gateway proxies `/auth-api/register` and `/auth-api/login` straight through to this
   service — this service is the sole issuer of the JWT.
 - The JWT is delivered only via an `HttpOnly`, `Secure` cookie — never in the JSON body.
 - Passwords are hashed with `BCryptPasswordEncoder` (strength 12).

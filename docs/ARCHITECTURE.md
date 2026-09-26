@@ -9,7 +9,7 @@ The API Gateway serves as the single entry point for all frontend client request
 *   **Reverse Proxy & Routing:** Intercepts all incoming HTTP traffic and routes it to the appropriate downstream microservice based on the URL path.
 *   **JWT Extraction & Validation:** Reads the `jwt_token` from the `HttpOnly` cookie on incoming requests. It validates the digital signature and expiration of the token using the shared secret key.
 *   **Header Mutation (The Trust Boundary):** Upon successful JWT validation, the Gateway extracts the user's ID and Role from the token payload, appends them as trusted HTTP headers (e.g., `X-User-Id`, `X-User-Role`), and strips any externally spoofed headers before forwarding the request to downstream services.
-*   **Auth Bypass:** Explicitly allows unauthenticated traffic to pass directly to the `iam-service` for specific routes (`/api/auth/login`, `/api/auth/register`).
+*   **Auth Bypass:** Explicitly allows unauthenticated traffic to pass directly to the `iam-service` for specific routes (`/auth-api/login`, `/auth-api/register`).
 
 ## iam-service
 The Identity & Access Management (IAM) service is the single source of truth for user authentication and authorization data. Built with Spring Web and Spring Data JPA, it is the only service permitted to directly access the user credential tables in the MySQL database.
@@ -47,7 +47,7 @@ Serves student-facing endpoints:
 ### C. Internal Module (`/internal/**`)
 Serves downstream services (such as the `attempt-service`):
 * **Secure Blueprints:** Exposes internal endpoints to fetch complete test structures including answer keys and point allocations[cite: 1].
-* **Cluster Protection:** Guarded by a shared secret filter (`X-Internal-Auth`) to prevent unauthorized access to grading keys[cite: 1].
+* **Cluster Protection:** Guarded by a shared secret filter (`X-Service-Auth`) to prevent unauthorized access to grading keys[cite: 1].
 
 ---
 
